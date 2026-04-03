@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Daily Expense Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --bg: #0e0f13;
+    --surface: #16181f;
+    --surface2: #1e2029;
+    --border: #2a2d3a;
+    --accent: #c9a84c;
+    --accent-dim: rgba(201,168,76,0.12);
+    --accent-glow: rgba(201,168,76,0.25);
+    --text: #e8e9ed;
+    --text-muted: #6b7080;
+    --text-dim: #9a9fb0;
+    --red: #e05c5c;
+    --red-dim: rgba(224,92,92,0.12);
+    --green: #5cb87a;
+    --green-dim: rgba(92,184,122,0.12);
+    --radius: 14px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.07) 0%, transparent 60%);
+  }
+
+  /* SETUP SCREEN */
+  #setupScreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .setup-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px;
+    max-width: 480px;
+    width: 100%;
+  }
+  .setup-box h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .setup-box p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .setup-field { margin-bottom: 16px; }
+  .setup-field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .setup-field input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 10px 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .setup-field input:focus { border-color: var(--accent); }
+  .btn-connect {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #0a0a0a;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+  .btn-connect:hover { background: #e0bd65; }
+  .setup-error {
+    color: var(--red);
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    margin-top: 10px;
+    display: none;
+  }
+  .setup-hint {
+    margin-top: 20px;
+    padding: 14px;
+    background: var(--accent-dim);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(201,168,76,0.2);
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  .setup-hint strong { color: var(--accent); }
+
+  /* MAIN APP */
+  #app { display: none; }
+
+  header {
+    padding: 24px 40px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .header-left { display: flex; align-items: baseline; gap: 16px; }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  header span {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+    box-shadow: 0 0 6px var(--green);
+  }
+  .conn-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .btn-reset {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 4px 10px;
+    cursor: pointer;
+    margin-left: 12px;
+    transition: all 0.2s;
+  }
+  .btn-reset:hover { color: var(--red); border-color: var(--red); }
+
+  .date-nav {
+    padding: 14px 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .date-nav input[type="date"] {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    padding: 8px 14px;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .date-nav input[type="date"]:focus { border-color: var(--accent); }
+  .btn-today {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 8px 14px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+  .btn-today:hover { background: var(--accent); color: #000; }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    min-height: calc(100vh - 116px);
+  }
+
+  .left { padding: 28px 40px; border-right: 1px solid var(--border); }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 30px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .card.income::before { background: var(--green); }
+  .card.expense::before { background: var(--red); }
+  .card.balance::before { background: var(--accent); }
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .card-value {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .card.income .card-value { color: var(--green); }
+  .card.expense .card-value { color: var(--red); }
+  .card.balance .card-value { color: var(--accent); }
+  .card-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 130px 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .form-field input,
+  .form-field select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .form-field input:focus,
+  .form-field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+  .form-field select option { background: var(--surface2); }
+
+  .desc-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 28px;
+  }
+  .btn-add {
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: #0a0a0a;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 24px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-add:hover { background: #e0bd65; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+  .btn-add:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .entries-list { display: flex; flex-direction: column; gap: 8px; }
+  .entry-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.25s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .entry-item.income-entry { border-left: 3px solid var(--green); }
+  .entry-item.expense-entry { border-left: 3px solid var(--red); }
+  .entry-desc { font-size: 14px; color: var(--text); margin-bottom: 2px; }
+  .entry-meta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .entry-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-left: 8px;
+  }
+  .badge-income { background: var(--green-dim); color: var(--green); }
+  .badge-expense { background: var(--red-dim); color: var(--red); }
+  .entry-amount { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; text-align: right; }
+  .entry-amount.income { color: var(--green); }
+  .entry-amount.expense { color: var(--red); }
+  .btn-del {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 16px; padding: 2px 6px;
+    border-radius: 4px; transition: all 0.15s; opacity: 0;
+  }
+  .entry-item:hover .btn-del { opacity: 1; }
+  .btn-del:hover { color: var(--red); background: var(--red-dim); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 0;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+  }
+  .empty-state span { display: block; font-size: 28px; margin-bottom: 10px; }
+
+  .loading {
+    text-align: center;
+    padding: 32px 0;
+    color: var(--text-muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+  /* RIGHT */
+  .right { padding: 28px; background: var(--surface); }
+  .monthly-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; margin-bottom: 18px; }
+  .monthly-stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .monthly-stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+  .monthly-stat-value { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; }
+  .monthly-stat-value.green { color: var(--green); }
+  .monthly-stat-value.red { color: var(--red); }
+  .monthly-stat-value.gold { color: var(--accent); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .recent-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+  .recent-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); min-width: 56px; }
+  .recent-desc { color: var(--text-dim); flex: 1; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-amount { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; }
+  .recent-amount.e { color: var(--red); }
+  .recent-amount.i { color: var(--green); }
+
+  .type-toggle {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    gap: 3px;
+  }
+  .type-btn {
+    flex: 1; padding: 7px 10px; border: none; border-radius: 5px;
+    font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.5px;
+    cursor: pointer; transition: all 0.2s; background: transparent;
+    color: var(--text-muted); text-transform: uppercase;
+  }
+  .type-btn.active-expense { background: var(--red-dim); color: var(--red); border: 1px solid rgba(224,92,92,0.3); }
+  .type-btn.active-income { background: var(--green-dim); color: var(--green); border: 1px solid rgba(92,184,122,0.3); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 20px;
+    font-family: 'DM Mono', monospace; font-size: 12px;
+    color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.3s; z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; flex-direction: column; gap: 8px; }
+    .date-nav { padding: 12px 20px; }
+    .main { grid-template-columns: 1fr; }
+    .left { padding: 20px; }
+    .right { padding: 20px; border-top: 1px solid var(--border); }
+    .summary-grid { grid-template-columns: 1fr; gap: 8px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .desc-row { grid-template-columns: 1fr; }
+    .btn-add { width: 100%; }
+    .setup-box { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div id="setupScreen">
+  <div class="setup-box">
+    <h2>Connect to Supabase</h2>
+    <p>Enter your Supabase credentials to connect your database. Your data will sync across all your devices.</p>
+    <div class="setup-field">
+      <label>Supabase Project URL</label>
+      <input type="text" id="inputUrl" placeholder="https://xxxxxxxxxxxx.supabase.co">
+    </div>
+    <div class="setup-field">
+      <label>Supabase Anon Key</label>
+      <input type="text" id="inputKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5...">
+    </div>
+    <button class="btn-connect" onclick="connectSupabase()">Connect & Open Ledger →</button>
+    <div class="setup-error" id="setupError">Could not connect. Check your URL and key.</div>
+    <div class="setup-hint">
+      <strong>Where to find these?</strong><br>
+      Supabase Dashboard → Your Project → <strong>Project Settings → API</strong><br>
+      Copy the <strong>Project URL</strong> and the <strong>anon public</strong> key.
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <h1>Ledger</h1>
+      <span>Personal Finance Journal</span>
+    </div>
+    <div style="display:flex;align-items:center">
+      <span class="status-dot"></span>
+      <span class="conn-label">Connected</span>
+      <button class="btn-reset" onclick="resetConnection()">Change DB</button>
+    </div>
+  </header>
+
+  <div class="date-nav">
+    <input type="date" id="selectedDate">
+    <button class="btn-today" onclick="goToday()">Today</button>
+  </div>
+
+  <div class="main">
+    <div class="left">
+      <div class="summary-grid">
+        <div class="card income">
+          <div class="card-label">Daily Income</div>
+          <div class="card-value" id="dailyIncome">£0.00</div>
+          <div class="card-sub" id="dailyIncomeCount">0 entries</div>
+        </div>
+        <div class="card expense">
+          <div class="card-label">Daily Expenses</div>
+          <div class="card-value" id="dailyExpense">£0.00</div>
+          <div class="card-sub" id="dailyExpenseCount">0 entries</div>
+        </div>
+        <div class="card balance">
+          <div class="card-label">Net Balance</div>
+          <div class="card-value" id="dailyBalance">£0.00</div>
+          <div class="card-sub">income – expenses</div>
+        </div>
+      </div>
+
+      <div class="section-title">Add Entry</div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Type</label>
+          <div class="type-toggle">
+            <button class="type-btn active-expense" id="btnExpense" onclick="setType('expense')">Expense</button>
+            <button class="type-btn" id="btnIncome" onclick="setType('income')">Income</button>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Amount (£)</label>
+          <input type="number" id="amount" placeholder="0.00" min="0" step="0.01">
+        </div>
+        <div class="form-field">
+          <label>Category</label>
+          <select id="category">
+            <option value="Food & Drink">Food & Drink</option>
+            <option value="Transport">Transport</option>
+            <option value="Shopping">Shopping</option>
+            <option value="Housing">Housing</option>
+            <option value="Health">Health</option>
+            <option value="Entertainment">Entertainment</option>
+            <option value="Utilities">Utilities</option>
+            <option value="Salary">Salary</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="desc-row">
+        <div class="form-field">
+          <label>Description</label>
+          <input type="text" id="description" placeholder="What was this for?" onkeydown="if(event.key==='Enter')addEntry()">
+        </div>
+        <button class="btn-add" id="btnAdd" onclick="addEntry()">+ Add</button>
+      </div>
+
+      <div class="section-title" id="entriesTitle">Today's Entries</div>
+      <div class="entries-list" id="entriesList">
+        <div class="loading">Loading entries…</div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="monthly-title" id="monthTitle">This Month</div>
+      <div class="monthly-stat">
+        <div class="monthly-stat-label">Total Income</div>
+        <div class="monthly-stat-value green" id="monthIncome">£0.00</div>
+      </div>
+      <div class="monthly-stat">
+        <div class="monthly-stat-label">Total Expenses</div>
+        <div class="monthly-stat-value red" id="monthExpense">£0.00</div>
+      </div>
+      <div class="monthly-stat">
+        <div class="monthly-stat-label">Net Balance</div>
+        <div class="monthly-stat-value gold" id="monthBalance">£0.00</div>
+      </div>
+      <hr class="divider">
+      <div class="recent-title">Recent Activity</div>
+      <div id="recentList"><div class="loading">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let supabase = null;
+  let currentType = 'expense';
+  const today = new Date().toISOString().split('T')[0];
+
+  // Check if already configured
+  const savedUrl = localStorage.getItem('sb_url');
+  const savedKey = localStorage.getItem('sb_key');
+  if (savedUrl && savedKey) {
+    initApp(savedUrl, savedKey);
+  }
+
+  async function connectSupabase() {
+    const url = document.getElementById('inputUrl').value.trim();
+    const key = document.getElementById('inputKey').value.trim();
+    const errEl = document.getElementById('setupError');
+    errEl.style.display = 'none';
+
+    if (!url || !key) { errEl.textContent = 'Please fill in both fields.'; errEl.style.display = 'block'; return; }
+
+    try {
+      const client = window.supabase.createClient(url, key);
+      // Test connection
+      const { error } = await client.from('entries').select('id').limit(1);
+      if (error) throw error;
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      initApp(url, key);
+    } catch(e) {
+      errEl.textContent = 'Could not connect: ' + (e.message || 'Check your credentials and make sure the entries table exists.');
+      errEl.style.display = 'block';
+    }
+  }
+
+  function initApp(url, key) {
+    supabase = window.supabase.createClient(url, key);
+    document.getElementById('setupScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    const datePicker = document.getElementById('selectedDate');
+    datePicker.value = today;
+    datePicker.addEventListener('change', render);
+    render();
+  }
+
+  function resetConnection() {
+    if (!confirm('Disconnect from current database?')) return;
+    localStorage.removeItem('sb_url');
+    localStorage.removeItem('sb_key');
+    location.reload();
+  }
+
+  function goToday() {
+    document.getElementById('selectedDate').value = today;
+    render();
+  }
+
+  function setType(type) {
+    currentType = type;
+    document.getElementById('btnExpense').className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
+    document.getElementById('btnIncome').className = 'type-btn' + (type === 'income' ? ' active-income' : '');
+  }
+
+  function fmt(n) { return '£' + Math.abs(n).toFixed(2); }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + type + ' show';
+    setTimeout(() => { t.className = 'toast'; }, 2500);
+  }
+
+  async function addEntry() {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const desc = document.getElementById('description').value.trim();
+    const cat = document.getElementById('category').value;
+    const date = document.getElementById('selectedDate').value;
+
+    if (!amount || amount <= 0) { shake('amount'); return; }
+    if (!desc) { shake('description'); return; }
+
+    const btn = document.getElementById('btnAdd');
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+
+    const { error } = await supabase.from('entries').insert([{
+      date, type: currentType, amount, description: desc, category: cat
+    }]);
+
+    btn.disabled = false;
+    btn.textContent = '+ Add';
+
+    if (error) { showToast('Error saving entry', 'error'); return; }
+
+    document.getElementById('amount').value = '';
+    document.getElementById('description').value = '';
+    showToast('Entry saved ✓');
+    render();
+  }
+
+  async function deleteEntry(id) {
+    const { error } = await supabase.from('entries').delete().eq('id', id);
+    if (error) { showToast('Error deleting entry', 'error'); return; }
+    showToast('Entry deleted');
+    render();
+  }
+
+  function shake(id) {
+    const el = document.getElementById(id);
+    el.style.borderColor = 'var(--red)';
+    el.style.boxShadow = '0 0 0 3px var(--red-dim)';
+    setTimeout(() => { el.style.borderColor = ''; el.style.boxShadow = ''; }, 600);
+  }
+
+  async function render() {
+    const selDate = document.getElementById('selectedDate').value;
+    const selMonth = selDate.slice(0, 7);
+
+    // Daily entries
+    const { data: dayEntries } = await supabase
+      .from('entries').select('*')
+      .eq('date', selDate)
+      .order('created_at', { ascending: false });
+
+    const entries = dayEntries || [];
+    const dailyIncome = entries.filter(e => e.type === 'income').reduce((s,e) => s+Number(e.amount), 0);
+    const dailyExpense = entries.filter(e => e.type === 'expense').reduce((s,e) => s+Number(e.amount), 0);
+
+    document.getElementById('dailyIncome').textContent = fmt(dailyIncome);
+    document.getElementById('dailyExpense').textContent = fmt(dailyExpense);
+    document.getElementById('dailyBalance').textContent = fmt(dailyIncome - dailyExpense);
+    document.getElementById('dailyIncomeCount').textContent = entries.filter(e=>e.type==='income').length + ' entries';
+    document.getElementById('dailyExpenseCount').textContent = entries.filter(e=>e.type==='expense').length + ' entries';
+
+    document.getElementById('entriesTitle').textContent =
+      selDate === today ? "Today's Entries" : `Entries for ${selDate}`;
+
+    const list = document.getElementById('entriesList');
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state"><span>📋</span>No entries for this day yet</div>';
+    } else {
+      list.innerHTML = entries.map(e => `
+        <div class="entry-item ${e.type === 'income' ? 'income-entry' : 'expense-entry'}">
+          <div>
+            <div class="entry-desc">${e.description}
+              <span class="entry-badge ${e.type === 'income' ? 'badge-income' : 'badge-expense'}">${e.category}</span>
+            </div>
+            <div class="entry-meta">${e.type.toUpperCase()} · ${e.date}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="entry-amount ${e.type}">${e.type==='income'?'+':'-'}${fmt(e.amount)}</div>
+            <button class="btn-del" onclick="deleteEntry(${e.id})">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Monthly stats
+    const { data: monthData } = await supabase
+      .from('entries').select('type, amount')
+      .gte('date', selMonth + '-01')
+      .lte('date', selMonth + '-31');
+
+    const mEntries = monthData || [];
+    const monthIncome = mEntries.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount),0);
+    const monthExpense = mEntries.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount),0);
+    const monthBal = monthIncome - monthExpense;
+    const monthName = new Date(selDate + 'T12:00:00').toLocaleString('default', { month: 'long', year: 'numeric' });
+
+    document.getElementById('monthTitle').textContent = monthName;
+    document.getElementById('monthIncome').textContent = fmt(monthIncome);
+    document.getElementById('monthExpense').textContent = fmt(monthExpense);
+    const mbEl = document.getElementById('monthBalance');
+    mbEl.textContent = fmt(monthBal);
+    mbEl.className = 'monthly-stat-value ' + (monthBal >= 0 ? 'green' : 'red');
+
+    // Recent activity
+    const { data: recentData } = await supabase
+      .from('entries').select('*')
+      .order('created_at', { ascending: false }).limit(8);
+
+    const rList = document.getElementById('recentList');
+    const recent = recentData || [];
+    if (recent.length === 0) {
+      rList.innerHTML = '<div style="color:var(--text-muted);font-size:12px;font-family:DM Mono,monospace;">No activity yet</div>';
+    } else {
+      rList.innerHTML = recent.map(e => `
+        <div class="recent-item">
+          <div class="recent-date">${e.date.slice(5)}</div>
+          <div class="recent-desc">${e.description}</div>
+          <div class="recent-amount ${e.type==='expense'?'e':'i'}">${e.type==='income'?'+':'-'}${fmt(e.amount)}</div>
+        </div>
+      `).join('');
+    }
+  }
+</script>
+</body>
+</html>
