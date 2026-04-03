@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Daily Expense Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0f13; --surface: #16181f; --surface2: #1e2029; --border: #2a2d3a;
+    --accent: #c9a84c; --accent-dim: rgba(201,168,76,0.12); --accent-glow: rgba(201,168,76,0.25);
+    --text: #e8e9ed; --text-muted: #6b7080; --text-dim: #9a9fb0;
+    --red: #e05c5c; --red-dim: rgba(224,92,92,0.12);
+    --green: #5cb87a; --green-dim: rgba(92,184,122,0.12);
+    --radius: 14px; --radius-sm: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.07) 0%, transparent 60%); }
+  header { padding: 24px 40px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: baseline; justify-content: space-between; }
+  .header-left { display: flex; align-items: baseline; gap: 16px; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--accent); }
+  header span { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 6px; box-shadow: 0 0 6px var(--green); }
+  .conn-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .date-nav { padding: 14px 40px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+  .date-nav input[type="date"] { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; padding: 8px 14px; outline: none; cursor: pointer; }
+  .btn-today { background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius-sm); color: var(--accent); font-family: 'DM Mono', monospace; font-size: 11px; padding: 8px 14px; cursor: pointer; transition: all 0.2s; }
+  .btn-today:hover { background: var(--accent); color: #000; }
+  .main { display: grid; grid-template-columns: 1fr 340px; min-height: calc(100vh - 116px); }
+  .left { padding: 28px 40px; border-right: 1px solid var(--border); }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 30px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; position: relative; overflow: hidden; }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .card.income::before { background: var(--green); } .card.expense::before { background: var(--red); } .card.balance::before { background: var(--accent); }
+  .card-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .card-value { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 600; line-height: 1; }
+  .card.income .card-value { color: var(--green); } .card.expense .card-value { color: var(--red); } .card.balance .card-value { color: var(--accent); }
+  .card-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .form-grid { display: grid; grid-template-columns: 130px 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .form-field { display: flex; flex-direction: column; gap: 6px; }
+  .form-field label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); }
+  .form-field input, .form-field select { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 10px 13px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; }
+  .form-field input:focus, .form-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .form-field select option { background: var(--surface2); }
+  .desc-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: flex-end; margin-bottom: 28px; }
+  .btn-add { background: var(--accent); border: none; border-radius: var(--radius-sm); color: #0a0a0a; font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; padding: 10px 24px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+  .btn-add:hover { background: #e0bd65; transform: translateY(-1px); box-shadow: 0 4px 16px var(--accent-glow); }
+  .btn-add:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .entries-list { display: flex; flex-direction: column; gap: 8px; }
+  .entry-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 18px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; animation: slideIn 0.25s ease; }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .entry-item.income-entry { border-left: 3px solid var(--green); } .entry-item.expense-entry { border-left: 3px solid var(--red); }
+  .entry-desc { font-size: 14px; color: var(--text); margin-bottom: 2px; }
+  .entry-meta { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); }
+  .entry-badge { font-family: 'DM Mono', monospace; font-size: 10px; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 8px; }
+  .badge-income { background: var(--green-dim); color: var(--green); } .badge-expense { background: var(--red-dim); color: var(--red); }
+  .entry-amount { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 600; text-align: right; }
+  .entry-amount.income { color: var(--green); } .entry-amount.expense { color: var(--red); }
+  .btn-del { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 4px; transition: all 0.15s; opacity: 0; }
+  .entry-item:hover .btn-del { opacity: 1; } .btn-del:hover { color: var(--red); background: var(--red-dim); }
+  .empty-state { text-align: center; padding: 48px 0; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 13px; }
+  .empty-state span { display: block; font-size: 28px; margin-bottom: 10px; }
+  .loading { text-align: center; padding: 32px 0; color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 12px; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+  .right { padding: 28px; background: var(--surface); }
+  .monthly-title { font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 600; margin-bottom: 18px; }
+  .monthly-stat { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .monthly-stat-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; }
+  .monthly-stat-value { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 600; }
+  .monthly-stat-value.green { color: var(--green); } .monthly-stat-value.red { color: var(--red); } .monthly-stat-value.gold { color: var(--accent); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+  .recent-title { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
+  .recent-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .recent-item:last-child { border-bottom: none; }
+  .recent-date { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); min-width: 56px; }
+  .recent-desc { color: var(--text-dim); flex: 1; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .recent-amount { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; }
+  .recent-amount.e { color: var(--red); } .recent-amount.i { color: var(--green); }
+  .type-toggle { display: flex; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px; gap: 3px; }
+  .type-btn { flex: 1; padding: 7px 10px; border: none; border-radius: 5px; font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted); text-transform: uppercase; }
+  .type-btn.active-expense { background: var(--red-dim); color: var(--red); border: 1px solid rgba(224,92,92,0.3); }
+  .type-btn.active-income { background: var(--green-dim); color: var(--green); border: 1px solid rgba(92,184,122,0.3); }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 20px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,0.4); transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 999; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--green); color: var(--green); } .toast.error { border-color: var(--red); color: var(--red); }
+  @media (max-width: 768px) {
+    header { padding: 16px 20px; flex-direction: column; gap: 8px; }
+    .date-nav { padding: 12px 20px; }
+    .main { grid-template-columns: 1fr; }
+    .left { padding: 20px; } .right { padding: 20px; border-top: 1px solid var(--border); }
+    .summary-grid { grid-template-columns: 1fr; gap: 8px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .desc-row { grid-template-columns: 1fr; } .btn-add { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Ledger</h1>
+    <span>Personal Finance Journal</span>
+  </div>
+  <div style="display:flex;align-items:center">
+    <span class="status-dot"></span>
+    <span class="conn-label">Connected to Supabase</span>
+  </div>
+</header>
+
+<div class="date-nav">
+  <input type="date" id="selectedDate">
+  <button class="btn-today" id="btnToday">Today</button>
+</div>
+
+<div class="main">
+  <div class="left">
+    <div class="summary-grid">
+      <div class="card income">
+        <div class="card-label">Daily Income</div>
+        <div class="card-value" id="dailyIncome">£0.00</div>
+        <div class="card-sub" id="dailyIncomeCount">0 entries</div>
+      </div>
+      <div class="card expense">
+        <div class="card-label">Daily Expenses</div>
+        <div class="card-value" id="dailyExpense">£0.00</div>
+        <div class="card-sub" id="dailyExpenseCount">0 entries</div>
+      </div>
+      <div class="card balance">
+        <div class="card-label">Net Balance</div>
+        <div class="card-value" id="dailyBalance">£0.00</div>
+        <div class="card-sub">income – expenses</div>
+      </div>
+    </div>
+
+    <div class="section-title">Add Entry</div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Type</label>
+        <div class="type-toggle">
+          <button class="type-btn active-expense" id="btnExpense">Expense</button>
+          <button class="type-btn" id="btnIncome">Income</button>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Amount (£)</label>
+        <input type="number" id="amount" placeholder="0.00" min="0" step="0.01">
+      </div>
+      <div class="form-field">
+        <label>Category</label>
+        <select id="category">
+          <option>Food &amp; Drink</option><option>Transport</option><option>Shopping</option>
+          <option>Housing</option><option>Health</option><option>Entertainment</option>
+          <option>Utilities</option><option>Salary</option><option>Freelance</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="desc-row">
+      <div class="form-field">
+        <label>Description</label>
+        <input type="text" id="description" placeholder="What was this for?">
+      </div>
+      <button class="btn-add" id="btnAdd">+ Add</button>
+    </div>
+
+    <div class="section-title" id="entriesTitle">Today's Entries</div>
+    <div class="entries-list" id="entriesList"><div class="loading">Loading entries…</div></div>
+  </div>
+
+  <div class="right">
+    <div class="monthly-title" id="monthTitle">This Month</div>
+    <div class="monthly-stat"><div class="monthly-stat-label">Total Income</div><div class="monthly-stat-value green" id="monthIncome">£0.00</div></div>
+    <div class="monthly-stat"><div class="monthly-stat-label">Total Expenses</div><div class="monthly-stat-value red" id="monthExpense">£0.00</div></div>
+    <div class="monthly-stat"><div class="monthly-stat-label">Net Balance</div><div class="monthly-stat-value gold" id="monthBalance">£0.00</div></div>
+    <hr class="divider">
+    <div class="recent-title">Recent Activity</div>
+    <div id="recentList"><div class="loading">Loading…</div></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+  const db = createClient(
+    'https://qkfwbkqdhnxmpjyzdoav.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrZndia3FkaG54bXBqeXpkb2F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjUwMDYsImV4cCI6MjA5MDc0MTAwNn0.1dxHUmr-LstLWwhiB3v-JorRtbezMFxXSZJZ9_q8prY'
+  );
+
+  const today = new Date().toISOString().split('T')[0];
+  let currentType = 'expense';
+
+  const datePicker = document.getElementById('selectedDate');
+  datePicker.value = today;
+  datePicker.addEventListener('change', render);
+
+  document.getElementById('btnToday').addEventListener('click', () => { datePicker.value = today; render(); });
+  document.getElementById('btnExpense').addEventListener('click', () => setType('expense'));
+  document.getElementById('btnIncome').addEventListener('click', () => setType('income'));
+  document.getElementById('btnAdd').addEventListener('click', addEntry);
+  document.getElementById('description').addEventListener('keydown', e => { if (e.key === 'Enter') addEntry(); });
+
+  function setType(type) {
+    currentType = type;
+    document.getElementById('btnExpense').className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
+    document.getElementById('btnIncome').className = 'type-btn' + (type === 'income' ? ' active-income' : '');
+  }
+
+  function fmt(n) { return '£' + Math.abs(n).toFixed(2); }
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast ' + type + ' show';
+    setTimeout(() => { t.className = 'toast'; }, 2500);
+  }
+
+  function shake(id) {
+    const el = document.getElementById(id);
+    el.style.borderColor = 'var(--red)'; el.style.boxShadow = '0 0 0 3px var(--red-dim)';
+    setTimeout(() => { el.style.borderColor = ''; el.style.boxShadow = ''; }, 600);
+  }
+
+  async function addEntry() {
+    const amount = parseFloat(document.getElementById('amount').value);
+    const desc = document.getElementById('description').value.trim();
+    const cat = document.getElementById('category').value;
+    const date = datePicker.value;
+    if (!amount || amount <= 0) { shake('amount'); return; }
+    if (!desc) { shake('description'); return; }
+
+    const btn = document.getElementById('btnAdd');
+    btn.disabled = true; btn.textContent = 'Saving…';
+
+    const { error } = await db.from('entries').insert([{ date, type: currentType, amount, description: desc, category: cat }]);
+    btn.disabled = false; btn.textContent = '+ Add';
+
+    if (error) { showToast('Error: ' + error.message, 'error'); return; }
+    document.getElementById('amount').value = '';
+    document.getElementById('description').value = '';
+    showToast('Entry saved ✓');
+    render();
+  }
+
+  async function deleteEntry(id) {
+    const { error } = await db.from('entries').delete().eq('id', id);
+    if (error) { showToast('Error deleting', 'error'); return; }
+    showToast('Deleted'); render();
+  }
+
+  async function render() {
+    const selDate = datePicker.value;
+    const selMonth = selDate.slice(0, 7);
+
+    const { data: dayEntries } = await db.from('entries').select('*').eq('date', selDate).order('created_at', { ascending: false });
+    const entries = dayEntries || [];
+    const dIncome = entries.filter(e => e.type==='income').reduce((s,e) => s+Number(e.amount), 0);
+    const dExpense = entries.filter(e => e.type==='expense').reduce((s,e) => s+Number(e.amount), 0);
+
+    document.getElementById('dailyIncome').textContent = fmt(dIncome);
+    document.getElementById('dailyExpense').textContent = fmt(dExpense);
+    document.getElementById('dailyBalance').textContent = fmt(dIncome - dExpense);
+    document.getElementById('dailyIncomeCount').textContent = entries.filter(e=>e.type==='income').length + ' entries';
+    document.getElementById('dailyExpenseCount').textContent = entries.filter(e=>e.type==='expense').length + ' entries';
+    document.getElementById('entriesTitle').textContent = selDate === today ? "Today's Entries" : `Entries for ${selDate}`;
+
+    document.getElementById('entriesList').innerHTML = entries.length === 0
+      ? '<div class="empty-state"><span>📋</span>No entries for this day yet</div>'
+      : entries.map(e => `
+        <div class="entry-item ${e.type==='income'?'income-entry':'expense-entry'}">
+          <div>
+            <div class="entry-desc">${e.description} <span class="entry-badge ${e.type==='income'?'badge-income':'badge-expense'}">${e.category}</span></div>
+            <div class="entry-meta">${e.type.toUpperCase()} · ${e.date}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="entry-amount ${e.type}">${e.type==='income'?'+':'-'}${fmt(e.amount)}</div>
+            <button class="btn-del" data-id="${e.id}">✕</button>
+          </div>
+        </div>`).join('');
+
+    document.querySelectorAll('.btn-del').forEach(btn => {
+      btn.addEventListener('click', () => deleteEntry(btn.dataset.id));
+    });
+
+    const { data: monthData } = await db.from('entries').select('type,amount').gte('date', selMonth+'-01').lte('date', selMonth+'-31');
+    const mE = monthData || [];
+    const mInc = mE.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount),0);
+    const mExp = mE.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount),0);
+    const mBal = mInc - mExp;
+    document.getElementById('monthTitle').textContent = new Date(selDate+'T12:00:00').toLocaleString('default',{month:'long',year:'numeric'});
+    document.getElementById('monthIncome').textContent = fmt(mInc);
+    document.getElementById('monthExpense').textContent = fmt(mExp);
+    const mbEl = document.getElementById('monthBalance');
+    mbEl.textContent = fmt(mBal); mbEl.className = 'monthly-stat-value ' + (mBal>=0?'green':'red');
+
+    const { data: recent } = await db.from('entries').select('*').order('created_at',{ascending:false}).limit(8);
+    document.getElementById('recentList').innerHTML = (recent||[]).length === 0
+      ? '<div style="color:var(--text-muted);font-size:12px;font-family:DM Mono,monospace;">No activity yet</div>'
+      : (recent||[]).map(e=>`
+        <div class="recent-item">
+          <div class="recent-date">${e.date.slice(5)}</div>
+          <div class="recent-desc">${e.description}</div>
+          <div class="recent-amount ${e.type==='expense'?'e':'i'}">${e.type==='income'?'+':'-'}${fmt(e.amount)}</div>
+        </div>`).join('');
+  }
+
+  render();
+</script>
+</body>
+</html>
