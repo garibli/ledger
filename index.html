@@ -190,6 +190,15 @@
   .mini-stat:last-child { border-bottom: none; }
   .mini-stat .k { color: var(--text-dim); } .mini-stat .v { font-family: 'DM Mono', monospace; }
   .hint { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text-muted); line-height: 1.7; }
+  .range-btns { display: flex; flex-wrap: wrap; gap: 7px; }
+  .range-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--text-muted);
+               font-family: 'DM Mono', monospace; font-size: 11px; padding: 7px 14px; cursor: pointer; transition: all .2s; }
+  .range-btn:hover { border-color: var(--accent); color: var(--text-dim); }
+  .range-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+  .bal-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; color: var(--accent);
+               font-family: 'DM Mono', monospace; font-size: 12px; padding: 4px 7px; width: 110px; text-align: right; outline: none; }
+  .bal-input:focus { border-color: var(--accent); }
+  .spark { width: 100%; height: 140px; display: block; }
 
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 20px; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); box-shadow: 0 8px 32px rgba(0,0,0,.4); transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 999; max-width: 90vw; }
   .toast.show { transform: translateY(0); opacity: 1; }
@@ -240,6 +249,7 @@
       <button class="nav-btn active" data-view="expenses">Expenses</button>
       <button class="nav-btn" data-view="invest">Investments</button>
       <button class="nav-btn" data-view="gold">Gold</button>
+      <button class="nav-btn" data-view="networth">Net Worth</button>
       <button class="nav-btn" data-view="analysis">Analysis</button>
     </nav>
   </header>
@@ -440,9 +450,98 @@
     </div>
   </section>
 
+  <!-- ═══════════ NET WORTH ═══════════ -->
+  <section class="view" id="view-networth">
+    <div class="page">
+      <div class="summary-grid">
+        <div class="card info"><div class="card-label">Investments</div>
+          <div class="card-value" id="nwInv">—</div><div class="card-sub">stocks and ETFs at your prices</div></div>
+        <div class="card balance"><div class="card-label">Gold</div>
+          <div class="card-value" id="nwGold">—</div><div class="card-sub" id="nwGoldSub">—</div></div>
+        <div class="card income"><div class="card-label">Cash and bank</div>
+          <div class="card-value" id="nwCash">—</div><div class="card-sub" id="nwCashSub">0 accounts</div></div>
+        <div class="card balance"><div class="card-label">Total net worth</div>
+          <div class="card-value" id="nwTotal">—</div><div class="card-sub" id="nwTotalSub">everything together</div></div>
+      </div>
+
+      <div class="panel" id="nwRatesWarn" style="display:none">
+        <div class="panel-title">Exchange rates needed</div>
+        <div class="panel-note" style="margin-bottom:0">
+          Your money sits in several currencies, so nothing can be added together until you set the rates.
+          Open the Analysis tab, fill in the two rate boxes, and press Combine. Then come back here.
+        </div>
+      </div>
+
+      <div class="section-title">Cash and bank accounts</div>
+      <div class="panel-note" style="margin-top:-6px">
+        Type a new balance straight into the table whenever it changes. It saves as you leave the box.
+      </div>
+      <div class="tbl-wrap"><table id="acctTbl">
+        <thead><tr><th>Account</th><th>Kind</th><th>Balance</th><th>Currency</th><th>In <span id="acctBaseLbl">base</span></th><th>Updated</th><th></th></tr></thead>
+        <tbody><tr><td colspan="7"><div class="loading">Loading…</div></td></tr></tbody>
+      </table></div>
+
+      <div class="form-grid fg-trade" style="margin-top:18px">
+        <div class="form-field"><label>Account name</label><input type="text" id="aName" placeholder="ABB card" maxlength="60"></div>
+        <div class="form-field"><label>Kind</label><select id="aKind">
+          <option value="bank">Bank</option><option value="cash">Cash</option>
+          <option value="savings">Savings</option><option value="other">Other</option></select></div>
+        <div class="form-field"><label>Balance</label><input type="number" id="aBal" placeholder="0.00" step="0.01"></div>
+        <div class="form-field"><label>Currency</label><select id="aCur">
+          <option>AZN</option><option>GBP</option><option>USD</option><option>TRY</option><option>EUR</option></select></div>
+      </div>
+      <div class="desc-row">
+        <div class="form-field"><label>Note</label><input type="text" id="aNote" placeholder="What this account is for" maxlength="120"></div>
+        <button class="btn-add" id="btnAddAcct">+ Add Account</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Save today's net worth</div>
+        <div class="panel-note" id="snapPreview">—</div>
+        <div class="rate-row">
+          <div class="form-field"><label>Date</label><input type="date" id="snapDate"></div>
+          <div class="form-field"><label>Note (optional)</label><input type="text" id="snapNote" placeholder="Before the Turkey trip" maxlength="160"></div>
+          <button class="btn-add" id="btnSnap">Save snapshot</button>
+        </div>
+        <div class="hint" style="margin-top:12px">
+          Saving twice on the same day replaces that day, so you never get duplicates. The exchange rates you
+          used are stored alongside, so an old row still makes sense months later.
+        </div>
+      </div>
+
+      <div class="section-title">History</div>
+      <div id="snapChart" style="margin-bottom:14px"></div>
+      <div class="tbl-wrap"><table id="snapTbl">
+        <thead><tr><th>Date</th><th>Investments</th><th>Gold</th><th>Cash</th><th>Total</th><th>Change</th><th>Note</th><th></th></tr></thead>
+        <tbody><tr><td colspan="8"><div class="loading">Loading…</div></td></tr></tbody>
+      </table></div>
+    </div>
+  </section>
+
   <!-- ═══════════ ANALYSIS ═══════════ -->
   <section class="view" id="view-analysis">
     <div class="page">
+      <div class="panel">
+        <div class="panel-title">Time period</div>
+        <div class="panel-note">Everything on this page covers the period you pick here.</div>
+        <div class="range-btns" id="rangeBtns">
+          <button class="range-btn" data-range="week">This week</button>
+          <button class="range-btn" data-range="last7">Last 7 days</button>
+          <button class="range-btn active" data-range="month">This month</button>
+          <button class="range-btn" data-range="lastmonth">Last month</button>
+          <button class="range-btn" data-range="last30">Last 30 days</button>
+          <button class="range-btn" data-range="year">This year</button>
+          <button class="range-btn" data-range="all">All time</button>
+          <button class="range-btn" data-range="custom">Custom</button>
+        </div>
+        <div class="rate-row" id="customRange" style="display:none;margin-top:14px">
+          <div class="form-field"><label>From</label><input type="date" id="rangeFrom"></div>
+          <div class="form-field"><label>To</label><input type="date" id="rangeTo"></div>
+          <button class="btn-ghost" id="btnApplyRange">Apply</button>
+        </div>
+        <div class="hint" id="rangeLabel" style="margin-top:12px"></div>
+      </div>
+
       <div class="panel">
         <div class="panel-title">Combine everything into one currency</div>
         <div class="panel-note">
@@ -531,8 +630,9 @@ const todayStr = new Date().toLocaleDateString('en-CA');
 let user = null, booted = false;
 let entryType = 'expense', entryCur = 'GBP', tradeSide = 'Buy', goldGift = false;
 let viewMonth = todayStr.slice(0, 7);
-let cache = { entries: [], trades: [], gold: [], thesis: [], prices: {} };
+let cache = { entries: [], trades: [], gold: [], thesis: [], prices: {}, accounts: [], snapshots: [] };
 let rates = { gbpAzn: null, usdAzn: null, base: 'GBP' };
+let range = { kind: 'month', from: null, to: null };
 let goldSpot = { price: null, cur: 'AZN' };
 
 /* ─────────── tiny helpers ─────────── */
@@ -626,7 +726,7 @@ function enterApp(u) {
 }
 function leaveApp() {
   user = null;
-  cache = { entries: [], trades: [], gold: [], thesis: [], prices: {} };
+  cache = { entries: [], trades: [], gold: [], thesis: [], prices: {}, accounts: [], snapshots: [] };
   $('loginScreen').style.display = 'flex';
   $('app').style.display = 'none';
 }
@@ -681,12 +781,36 @@ function wireUp() {
     goldSpot = { price: num($('gSpot').value), cur: $('gSpotCur').value };
     saveLocal('ledger.goldSpot', goldSpot);
     toast('Gold price saved');
-    renderGold(); renderAnalysis();
+    renderGold(); renderNetWorth(); renderAnalysis();
   });
   goldSpot = loadLocal('ledger.goldSpot', goldSpot);
   if (goldSpot.price) { $('gSpot').value = goldSpot.price; $('gSpotCur').value = goldSpot.cur; }
 
-  /* analysis */
+  /* net worth */
+  $('snapDate').value = todayStr;
+  $('btnAddAcct').addEventListener('click', addAccount);
+  $('btnSnap').addEventListener('click', saveSnapshot);
+
+  /* analysis range */
+  document.querySelectorAll('.range-btn').forEach(b =>
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.range-btn').forEach(x => x.classList.toggle('active', x === b));
+      range.kind = b.dataset.range;
+      $('customRange').style.display = range.kind === 'custom' ? 'flex' : 'none';
+      if (range.kind === 'custom') {
+        const r = currentRange();
+        if (!$('rangeFrom').value) $('rangeFrom').value = r.from;
+        if (!$('rangeTo').value) $('rangeTo').value = r.to;
+      }
+      renderAnalysis();
+    }));
+  $('btnApplyRange').addEventListener('click', () => {
+    range.from = $('rangeFrom').value || null;
+    range.to   = $('rangeTo').value || null;
+    if (range.from && range.to && range.from > range.to) { toast('From is after To', 'error'); return; }
+    renderAnalysis();
+  });
+
   rates = loadLocal('ledger.rates', rates);
   if (rates.gbpAzn) $('rGbpAzn').value = rates.gbpAzn;
   if (rates.usdAzn) $('rUsdAzn').value = rates.usdAzn;
@@ -695,7 +819,7 @@ function wireUp() {
     rates = { gbpAzn: num($('rGbpAzn').value), usdAzn: num($('rUsdAzn').value), base: $('baseCur').value };
     if (!ratesReady()) { toast('Fill in both exchange rates', 'error'); return; }
     saveLocal('ledger.rates', rates);
-    renderAnalysis();
+    renderAnalysis(); renderNetWorth();
     toast('Combined in ' + rates.base);
   });
 }
@@ -752,23 +876,27 @@ function stepMonth(delta) {
 /* ─────────── data loading ─────────── */
 async function refreshAll() {
   if (!user) return;
-  const [e, t, g, th, p] = await Promise.all([
+  const [e, t, g, th, p, ac, sn] = await Promise.all([
     db.from('entries').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
     db.from('trades').select('*').order('trade_date', { ascending: false }).order('created_at', { ascending: false }),
     db.from('gold_items').select('*').order('buy_date', { ascending: false }),
     db.from('thesis').select('*').order('ticker'),
-    db.from('prices').select('*')
+    db.from('prices').select('*'),
+    db.from('accounts').select('*').order('sort_order').order('id'),
+    db.from('networth_snapshots').select('*').order('snap_date', { ascending: false })
   ]);
-  const firstErr = [e, t, g, th, p].find(r => r.error);
+  const firstErr = [e, t, g, th, p, ac, sn].find(r => r.error);
   if (firstErr) toast('Database: ' + firstErr.error.message, 'error');
 
-  cache.entries = e.data || [];
-  cache.trades  = t.data || [];
-  cache.gold    = g.data || [];
-  cache.thesis  = th.data || [];
-  cache.prices  = Object.fromEntries((p.data || []).map(r => [r.ticker, Number(r.price)]));
+  cache.entries   = e.data || [];
+  cache.trades    = t.data || [];
+  cache.gold      = g.data || [];
+  cache.thesis    = th.data || [];
+  cache.prices    = Object.fromEntries((p.data || []).map(r => [r.ticker, Number(r.price)]));
+  cache.accounts  = ac.data || [];
+  cache.snapshots = sn.data || [];
 
-  renderExpenses(); renderInvest(); renderGold(); renderAnalysis();
+  renderExpenses(); renderInvest(); renderGold(); renderNetWorth(); renderAnalysis();
 }
 
 /* ─────────── expenses ─────────── */
@@ -1113,7 +1241,7 @@ async function savePrice(ticker, price) {
     { onConflict: 'user_id,ticker' });
   if (error) return toast('Could not save price', 'error');
   cache.prices[ticker] = price;
-  renderInvest(); renderAnalysis();
+  renderInvest(); renderNetWorth(); renderAnalysis();
 }
 
 async function addThesis() {
@@ -1253,16 +1381,266 @@ function renderGold() {
   });
 }
 
+/* ─────────── net worth ─────────── */
+function portfolioUsdValue() {
+  const { open } = buildHoldings();
+  return open.filter(h => h.value !== null).reduce((s, h) => s + h.value, 0);
+}
+function goldValueTotal() {   // in goldSpot.cur, or null
+  if (!goldSpot.price) return null;
+  return cache.gold.reduce((s, i) => s + pureGrams(i), 0) * num(goldSpot.price);
+}
+function cashTotalIn(base) {
+  return cache.accounts.reduce((s, a) => {
+    const v = conv(a.balance, a.currency, base);
+    return s + (Number.isFinite(v) ? v : 0);
+  }, 0);
+}
+function netWorthParts(base) {
+  const inv = conv(portfolioUsdValue(), 'USD', base);
+  const gv = goldValueTotal();
+  const gold = gv === null ? 0 : conv(gv, goldSpot.cur, base);
+  const cash = cashTotalIn(base);
+  return {
+    investments: Number.isFinite(inv) ? inv : 0,
+    gold: Number.isFinite(gold) ? gold : 0,
+    cash,
+    get total() { return this.investments + this.gold + this.cash; }
+  };
+}
+
+async function addAccount() {
+  if (!user) return;
+  const name = $('aName').value.trim();
+  if (!name) return shake('aName');
+  const { error } = await db.from('accounts').insert([{
+    user_id: user.id, name, kind: $('aKind').value, balance: num($('aBal').value),
+    currency: $('aCur').value, note: $('aNote').value.trim() || null,
+    sort_order: cache.accounts.length
+  }]);
+  if (error) return toast('Error: ' + error.message, 'error');
+  ['aName','aBal','aNote'].forEach(id => $(id).value = '');
+  toast('Account added'); refreshAll();
+}
+
+async function saveBalance(id, balance) {
+  const { error } = await db.from('accounts')
+    .update({ balance, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) return toast('Could not save balance', 'error');
+  const a = cache.accounts.find(x => x.id === id);
+  if (a) { a.balance = balance; a.updated_at = new Date().toISOString(); }
+  toast('Balance updated');
+  renderNetWorth();
+}
+
+async function saveSnapshot() {
+  if (!user) return;
+  if (!ratesReady()) return toast('Set the exchange rates on the Analysis tab first', 'error');
+  const base = rates.base || 'GBP';
+  const p = netWorthParts(base);
+  const { error } = await db.from('networth_snapshots').upsert({
+    user_id: user.id, snap_date: $('snapDate').value || todayStr, base_currency: base,
+    investments: Number(p.investments.toFixed(2)), gold: Number(p.gold.toFixed(2)),
+    cash: Number(p.cash.toFixed(2)), total: Number(p.total.toFixed(2)),
+    gbp_azn: rates.gbpAzn, usd_azn: rates.usdAzn, note: $('snapNote').value.trim() || null
+  }, { onConflict: 'user_id,snap_date' });
+  if (error) return toast('Error: ' + error.message, 'error');
+  $('snapNote').value = '';
+  toast('Snapshot saved'); refreshAll();
+}
+
+function renderNetWorth() {
+  const base = rates.base || 'GBP';
+  const ready = ratesReady();
+  $('nwRatesWarn').style.display = ready ? 'none' : 'block';
+  $('acctBaseLbl').textContent = base;
+
+  const p = netWorthParts(base);
+  const gv = goldValueTotal();
+  const anyPriced = buildHoldings().open.some(h => h.value !== null);
+
+  $('nwInv').textContent   = ready && anyPriced ? money(p.investments, base) : '—';
+  $('nwGold').textContent  = ready && gv !== null ? money(p.gold, base) : '—';
+  $('nwGoldSub').textContent = gv === null ? 'add the gram price on the Gold tab'
+    : grams(cache.gold.reduce((s, i) => s + pureGrams(i), 0)) + ' of pure gold';
+  $('nwCash').textContent  = ready ? money(p.cash, base) : '—';
+  $('nwCashSub').textContent = cache.accounts.length + (cache.accounts.length === 1 ? ' account' : ' accounts');
+  $('nwTotal').textContent = ready ? money(p.total, base) : '—';
+  $('nwTotalSub').textContent = ready && anyPriced && gv !== null
+    ? 'everything together' : 'some pieces still missing a price';
+
+  /* accounts table */
+  const tb = $('acctTbl').tBodies[0]; clear(tb);
+  if (!cache.accounts.length) {
+    const tr = el('tr'); const td = el('td'); td.colSpan = 7;
+    td.appendChild(el('div', 'empty-state', 'No accounts yet. Add your cash and bank balances below.'));
+    tr.appendChild(td); tb.appendChild(tr);
+  } else cache.accounts.forEach(a => {
+    const tr = el('tr');
+    const tdName = el('td', 'tick', a.name);
+    if (a.note) { const n = el('div', 'entry-meta', a.note); tdName.appendChild(n); }
+    tr.appendChild(tdName);
+    tr.appendChild(el('td', null, a.kind));
+    const tdBal = el('td');
+    const inp = el('input', 'bal-input');
+    inp.type = 'number'; inp.step = '0.01'; inp.value = num(a.balance);
+    inp.addEventListener('change', () => saveBalance(a.id, num(inp.value)));
+    tdBal.appendChild(inp); tr.appendChild(tdBal);
+    tr.appendChild(el('td', null, a.currency));
+    const inBase = conv(a.balance, a.currency, base);
+    tr.appendChild(el('td', null, Number.isFinite(inBase) ? money(inBase, base) : '—'));
+    tr.appendChild(el('td', null, a.updated_at ? String(a.updated_at).slice(0, 10) : '—'));
+    const tdDel = el('td'); const b = el('button', 'btn-del', '✕');
+    b.addEventListener('click', () => removeRow('accounts', a.id, 'account'));
+    tdDel.appendChild(b); tr.appendChild(tdDel);
+    tb.appendChild(tr);
+  });
+
+  /* snapshot preview */
+  $('snapPreview').textContent = ready
+    ? 'This will record ' + money(p.investments, base) + ' in investments, ' + money(p.gold, base) +
+      ' in gold and ' + money(p.cash, base) + ' in cash. Total ' + money(p.total, base) + '.'
+    : 'Set the exchange rates on the Analysis tab, then come back and save.';
+
+  /* history */
+  renderSnapChart();
+  const st = $('snapTbl').tBodies[0]; clear(st);
+  if (!cache.snapshots.length) {
+    const tr = el('tr'); const td = el('td'); td.colSpan = 8;
+    td.appendChild(el('div', 'empty-state', 'No snapshots yet'));
+    tr.appendChild(td); st.appendChild(tr);
+  } else cache.snapshots.forEach((s, i) => {
+    const prev = cache.snapshots[i + 1];     // list is newest first
+    const tr = el('tr');
+    tr.appendChild(el('td', null, s.snap_date));
+    tr.appendChild(el('td', null, money(s.investments, s.base_currency)));
+    tr.appendChild(el('td', null, money(s.gold, s.base_currency)));
+    tr.appendChild(el('td', null, money(s.cash, s.base_currency)));
+    tr.appendChild(el('td', null, money(s.total, s.base_currency)));
+    if (prev && prev.base_currency === s.base_currency) {
+      const d = num(s.total) - num(prev.total);
+      tr.appendChild(el('td', d >= 0 ? 'pos' : 'neg', (d >= 0 ? '+' : '') + money(d, s.base_currency)));
+    } else tr.appendChild(el('td', null, '—'));
+    tr.appendChild(el('td', null, s.note || '—'));
+    const tdDel = el('td'); const b = el('button', 'btn-del', '✕');
+    b.addEventListener('click', () => removeRow('networth_snapshots', s.id, 'snapshot'));
+    tdDel.appendChild(b); tr.appendChild(tdDel);
+    st.appendChild(tr);
+  });
+}
+
+function renderSnapChart() {
+  const box = $('snapChart'); clear(box);
+  const pts = [...cache.snapshots].reverse();     // oldest first
+  if (pts.length < 2) {
+    if (pts.length === 1) box.appendChild(el('div', 'cat-empty', 'One snapshot saved. Save another to see the line.'));
+    return;
+  }
+  const W = 1000, H = 140, pad = 10;
+  const vals = pts.map(s => num(s.total));
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = (hi - lo) || 1;
+  const x = i => pad + i * (W - pad * 2) / (pts.length - 1);
+  const y = v => H - pad - ((v - lo) / span) * (H - pad * 2);
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('class', 'spark');
+  svg.setAttribute('role', 'img');
+  const title = document.createElementNS(NS, 'title');
+  title.textContent = 'Net worth over time';
+  svg.appendChild(title);
+
+  const area = document.createElementNS(NS, 'path');
+  area.setAttribute('d',
+    `M ${x(0)} ${H - pad} ` + pts.map((s, i) => `L ${x(i)} ${y(num(s.total))}`).join(' ') +
+    ` L ${x(pts.length - 1)} ${H - pad} Z`);
+  area.setAttribute('fill', 'rgba(201,168,76,0.12)');
+  svg.appendChild(area);
+
+  const line = document.createElementNS(NS, 'path');
+  line.setAttribute('d', pts.map((s, i) => `${i ? 'L' : 'M'} ${x(i)} ${y(num(s.total))}`).join(' '));
+  line.setAttribute('fill', 'none');
+  line.setAttribute('stroke', '#c9a84c');
+  line.setAttribute('stroke-width', '2');
+  line.setAttribute('vector-effect', 'non-scaling-stroke');
+  svg.appendChild(line);
+
+  pts.forEach((s, i) => {
+    const c = document.createElementNS(NS, 'circle');
+    c.setAttribute('cx', x(i)); c.setAttribute('cy', y(num(s.total)));
+    c.setAttribute('r', '3'); c.setAttribute('fill', '#c9a84c');
+    c.setAttribute('vector-effect', 'non-scaling-stroke');
+    const t = document.createElementNS(NS, 'title');
+    t.textContent = s.snap_date + ': ' + money(s.total, s.base_currency);
+    c.appendChild(t);
+    svg.appendChild(c);
+  });
+  box.appendChild(svg);
+
+  const legend = el('div', 'hint');
+  legend.style.cssText = 'display:flex;justify-content:space-between;margin-top:4px';
+  legend.appendChild(el('span', null, pts[0].snap_date + ' · ' + money(pts[0].total, pts[0].base_currency)));
+  const last = pts[pts.length - 1];
+  const chg = num(last.total) - num(pts[0].total);
+  const right = el('span', null, last.snap_date + ' · ' + money(last.total, last.base_currency) +
+    '  (' + (chg >= 0 ? '+' : '') + money(chg, last.base_currency) + ')');
+  right.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
+  legend.appendChild(right);
+  box.appendChild(legend);
+}
+
 /* ─────────── analysis ─────────── */
+function startOfWeek(d) {                        // Monday
+  const x = new Date(d + 'T12:00:00');
+  const dow = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - dow);
+  return x.toLocaleDateString('en-CA');
+}
+function shiftDays(d, n) {
+  const x = new Date(d + 'T12:00:00');
+  x.setDate(x.getDate() + n);
+  return x.toLocaleDateString('en-CA');
+}
+function currentRange() {
+  const ym = todayStr.slice(0, 7);
+  switch (range.kind) {
+    case 'week':      return { from: startOfWeek(todayStr), to: todayStr, label: 'This week' };
+    case 'last7':     return { from: shiftDays(todayStr, -6), to: todayStr, label: 'Last 7 days' };
+    case 'lastmonth': {
+      const d = new Date(ym + '-15T12:00:00'); d.setMonth(d.getMonth() - 1);
+      const lm = d.toLocaleDateString('en-CA').slice(0, 7);
+      const r = monthRange(lm);
+      return { from: r.start, to: shiftDays(r.end, -1),
+               label: new Date(lm + '-15T12:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' }) };
+    }
+    case 'last30':    return { from: shiftDays(todayStr, -29), to: todayStr, label: 'Last 30 days' };
+    case 'year':      return { from: todayStr.slice(0, 4) + '-01-01', to: todayStr, label: todayStr.slice(0, 4) };
+    case 'all':       return { from: '1900-01-01', to: '2999-12-31', label: 'All time' };
+    case 'custom':    return { from: range.from || shiftDays(todayStr, -29), to: range.to || todayStr, label: 'Custom' };
+    default: {
+      const r = monthRange(ym);
+      return { from: r.start, to: shiftDays(r.end, -1),
+               label: new Date(ym + '-15T12:00:00').toLocaleString('en-GB', { month: 'long', year: 'numeric' }) };
+    }
+  }
+}
+
 function renderAnalysis() {
-  const { start, end } = monthRange(viewMonth);
-  const m = cache.entries.filter(e => e.date >= start && e.date < end);
+  const r = currentRange();
+  const m = cache.entries.filter(e => e.date >= r.from && e.date <= r.to);
+  const nDays = Math.max(1, Math.round((new Date(r.to) - new Date(r.from)) / 86400000) + 1);
+  $('rangeLabel').textContent = range.kind === 'all'
+    ? r.label + ' · ' + m.length + ' entries'
+    : r.label + ' · ' + r.from + ' to ' + r.to + ' · ' + nDays + ' days · ' + m.length + ' entries';
 
   /* separate */
   ['GBP','AZN'].forEach(cur => {
     const box = $('sep' + cur); clear(box);
     const inc = sumBy(m, cur, 'income'), exp = sumBy(m, cur, 'expense');
-    if (!inc && !exp) { box.appendChild(el('div', 'cat-empty', 'Nothing in ' + cur + ' this month')); return; }
+    if (!inc && !exp) { box.appendChild(el('div', 'cat-empty', 'Nothing in ' + cur + ' in this period')); return; }
     [['Income', inc, 'var(--green)'], ['Expenses', exp, 'var(--red)'], ['Net', inc - exp, 'var(--accent)']]
       .forEach(([k, v, c]) => {
         const r = el('div', 'mini-stat');
@@ -1300,7 +1678,7 @@ function renderAnalysis() {
     const converted = m.filter(e => e.type === 'expense')
       .map(e => ({ category: e.category, subcategory: e.subcategory, amount: conv(e.amount, e.currency || 'GBP', base) }));
     if (converted.length) catsBox.appendChild(catBars(converted, base));
-    else catsBox.appendChild(el('div', 'cat-empty', 'No expenses this month'));
+    else catsBox.appendChild(el('div', 'cat-empty', 'No expenses in this period'));
   }
 
   /* net worth */
