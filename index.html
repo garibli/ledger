@@ -419,8 +419,10 @@
         <div class="rate-row">
           <div class="form-field"><label>Price per gram, 24K</label><input type="number" id="gSpot" placeholder="0.00" min="0" step="0.01"></div>
           <div class="form-field"><label>Currency</label><select id="gSpotCur"><option>AZN</option><option>TRY</option><option>USD</option><option>GBP</option></select></div>
-          <button class="btn-ghost" id="btnSaveSpot">Save price</button>
+          <button class="btn-ghost" id="btnFetchGold">↻ Fetch live</button>
+          <button class="btn-add" id="btnSaveSpot">Save price</button>
         </div>
+        <div class="hint" id="goldStamp" style="margin-top:12px"></div>
       </div>
 
       <div class="section-title">Add Gold</div>
@@ -461,7 +463,7 @@
     <div class="page">
       <div class="summary-grid">
         <div class="card info"><div class="card-label">Investments</div>
-          <div class="card-value" id="nwInv">—</div><div class="card-sub">stocks and ETFs at your prices</div></div>
+          <div class="card-value" id="nwInv">—</div><div class="card-sub" id="nwInvSub">shares times live price</div></div>
         <div class="card balance"><div class="card-label">Gold</div>
           <div class="card-value" id="nwGold">—</div><div class="card-sub" id="nwGoldSub">—</div></div>
         <div class="card income"><div class="card-label">Cash and bank</div>
@@ -784,6 +786,7 @@ function wireUp() {
   ['gGrams','gKarat','gPpg'].forEach(id => $(id).addEventListener('input', goldPreview));
   $('gKarat').addEventListener('change', goldPreview);
   $('btnAddGold').addEventListener('click', addGold);
+  $('btnFetchGold').addEventListener('click', fetchGoldPrice);
   $('btnSaveSpot').addEventListener('click', () => {
     goldSpot = { price: num($('gSpot').value), cur: $('gSpotCur').value };
     saveLocal('ledger.goldSpot', goldSpot);
@@ -1377,6 +1380,51 @@ async function addGold() {
   toast('Gold saved'); refreshAll();
 }
 
+const GRAMS_PER_TROY_OZ = 31.1034768;
+
+async function fetchGoldPrice() {
+  if (!user) return;
+  const btn = $('btnFetchGold');
+  btn.disabled = true; btn.textContent = 'Fetching…';
+  try {
+    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: ['GC=F', 'AZN=X'] } });
+    if (error) throw error;
+    const ozUsd = data?.prices?.['GC=F'];
+    const aznPerUsd = data?.prices?.['AZN=X'];
+    if (!ozUsd) throw new Error('No gold price came back');
+
+    const usdPerGram = ozUsd / GRAMS_PER_TROY_OZ;
+    const want = $('gSpotCur').value;
+    let value, note;
+
+    if (want === 'USD') {
+      value = usdPerGram;
+      note = 'Gold futures at ' + money(ozUsd, 'USD') + ' per troy ounce, divided by 31.1035 grams.';
+    } else if (want === 'AZN' && aznPerUsd) {
+      value = usdPerGram * aznPerUsd;
+      note = 'Gold futures at ' + money(ozUsd, 'USD') + ' per ounce, so ' + money(usdPerGram, 'USD') +
+             ' per gram, at ' + num(aznPerUsd).toFixed(4) + ' manat to the dollar.';
+    } else {
+      $('gSpotCur').value = 'USD';
+      value = usdPerGram;
+      note = 'Only dollars are available automatically, so the currency has been set to USD. ' +
+             'Gold futures at ' + money(ozUsd, 'USD') + ' per troy ounce.';
+    }
+
+    $('gSpot').value = value.toFixed(2);
+    goldSpot = { price: Number(value.toFixed(2)), cur: $('gSpotCur').value };
+    saveLocal('ledger.goldSpot', goldSpot);
+    $('goldStamp').textContent = note + ' Fetched ' + new Date().toLocaleString('en-GB') +
+      '. This is the market price. A shop will pay you a little less than this.';
+    toast('Gold price updated');
+    renderGold(); renderNetWorth(); renderAnalysis();
+  } catch (err) {
+    toast('Could not fetch gold: ' + (err.message || err) + '. Type it in instead.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Fetch live';
+  }
+}
+
 function goldValueOf(item) {
   if (!goldSpot.price) return null;
   return pureGrams(item) * num(goldSpot.price);     // in goldSpot.cur
@@ -1505,7 +1553,12 @@ function renderNetWorth() {
   const gv = goldValueTotal();
   const anyPriced = buildHoldings().open.some(h => h.value !== null);
 
+  const usdTotal = portfolioUsdValue();
+  const priced = buildHoldings().open.filter(h => h.value !== null);
   $('nwInv').textContent   = ready && anyPriced ? money(p.investments, base) : '—';
+  $('nwInvSub').textContent = anyPriced
+    ? money(usdTotal, 'USD') + ' across ' + priced.length + (priced.length === 1 ? ' holding' : ' holdings')
+    : 'press Refresh on the Investments tab';
   $('nwGold').textContent  = ready && gv !== null ? money(p.gold, base) : '—';
   $('nwGoldSub').textContent = gv === null ? 'add the gram price on the Gold tab'
     : grams(cache.gold.reduce((s, i) => s + pureGrams(i), 0)) + ' of pure gold';
