@@ -359,7 +359,13 @@
       <div class="hint" id="tPreview" style="margin:-14px 0 26px"></div>
 
       <div class="section-title">Holdings</div>
-      <div class="panel-note" style="margin-top:-6px">Type a current price to see what each position is worth. Prices are saved, so you only retype them when you want fresh numbers.</div>
+      <div class="panel-note" style="margin-top:-6px">
+        Press Refresh to pull the latest prices, or type one in by hand. Either way they are saved.
+      </div>
+      <div class="rate-row" style="margin-bottom:14px">
+        <button class="btn-ghost" id="btnRefreshPrices">↻ Refresh live prices</button>
+        <span class="hint" id="priceStamp"></span>
+      </div>
       <div class="tbl-wrap"><table id="holdingsTbl">
         <thead><tr><th>Ticker</th><th>Shares</th><th>Net USD in</th><th>Avg cost</th><th>Current price</th><th>Value</th><th>Gain / loss</th><th>%</th><th>Weight</th></tr></thead>
         <tbody><tr><td colspan="9"><div class="loading">Loading…</div></td></tr></tbody>
@@ -769,6 +775,7 @@ function wireUp() {
   ['tQty','tPrice','tComm','tFx'].forEach(id => $(id).addEventListener('input', tradePreview));
   $('btnAddTrade').addEventListener('click', addTrade);
   $('btnAddThesis').addEventListener('click', addThesis);
+  $('btnRefreshPrices').addEventListener('click', refreshPrices);
 
   /* gold */
   $('gDate').value = todayStr;
@@ -893,6 +900,8 @@ async function refreshAll() {
   cache.gold      = g.data || [];
   cache.thesis    = th.data || [];
   cache.prices    = Object.fromEntries((p.data || []).map(r => [r.ticker, Number(r.price)]));
+  const stamps = (p.data || []).map(r => r.updated_at).filter(Boolean).sort();
+  cache.priceStamp = stamps.length ? stamps[stamps.length - 1] : null;
   cache.accounts  = ac.data || [];
   cache.snapshots = sn.data || [];
 
@@ -1166,6 +1175,10 @@ function renderInvest() {
     $('invGainPct').textContent = basisPriced ? pct(gain / basisPriced * 100) + (haveAll ? '' : ' (priced holdings only)') : '—';
   } else { gainEl.textContent = '—'; gainEl.className = 'card-value'; $('invGainPct').textContent = 'add prices below'; }
 
+  $('priceStamp').textContent = cache.priceStamp
+    ? 'Prices last updated ' + new Date(cache.priceStamp).toLocaleString('en-GB')
+    : 'No prices saved yet';
+
   /* holdings table */
   const tb = $('holdingsTbl').tBodies[0]; clear(tb);
   if (!open.length) {
@@ -1232,6 +1245,39 @@ function renderInvest() {
   });
 
   renderThesis();
+}
+
+async function refreshPrices() {
+  if (!user) return;
+  const tickers = [...new Set(buildHoldings().open.map(h => h.ticker))];
+  if (!tickers.length) return toast('No open positions to price', 'error');
+
+  const btn = $('btnRefreshPrices');
+  btn.disabled = true; btn.textContent = 'Fetching…';
+  try {
+    const { data, error } = await db.functions.invoke('quotes', { body: { tickers } });
+    if (error) throw error;
+    const got = data && data.prices ? data.prices : {};
+    const names = Object.keys(got);
+    if (!names.length) throw new Error('Nothing came back');
+
+    const rows = names.map(t => ({
+      user_id: user.id, ticker: t, price: Number(got[t]), updated_at: new Date().toISOString()
+    }));
+    const { error: saveErr } = await db.from('prices').upsert(rows, { onConflict: 'user_id,ticker' });
+    if (saveErr) throw saveErr;
+
+    names.forEach(t => { cache.prices[t] = Number(got[t]); });
+    const failed = (data.failed || []);
+    toast('Updated ' + names.length + ' price' + (names.length === 1 ? '' : 's') +
+          (failed.length ? ', ' + failed.join(', ') + ' failed' : ''));
+    renderInvest(); renderNetWorth(); renderAnalysis();
+    $('priceStamp').textContent = 'Last fetched ' + new Date().toLocaleString('en-GB');
+  } catch (err) {
+    toast('Could not fetch prices: ' + (err.message || err) + '. Type them in by hand instead.', 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Refresh live prices';
+  }
 }
 
 async function savePrice(ticker, price) {
