@@ -811,31 +811,37 @@ function countShown(a, from) { const x = shown(a, from); return countEl(x.v, v =
 function fmtRate(r) { return String(Number(Number(r).toFixed(4))); }
 
 /* one shared copy of the rates, display currency and gold price, kept in the database */
-let settingsOk = true, settingsWarned = false, pushTimer = null;
+let settingsErr = null, settingsWarned = false, pushTimer = null, pushByUser = false;
+async function readSettings() {
+  try { return await db.from('user_settings').select('*').maybeSingle(); }
+  catch (e) { return { error: { message: e?.message || 'network error' } }; }
+}
 async function pullSettings() {
-  try {
-    const { data, error } = await db.from('user_settings').select('*').maybeSingle();
-    if (error) { settingsOk = false; return; }
-    settingsOk = true;
+  let res = await readSettings();
+  if (res.error) { await new Promise(r => setTimeout(r, 1500)); res = await readSettings(); }   // one quiet retry
+  if (res.error) { settingsErr = res.error.message || 'unknown error'; console.warn('[settings] read failed:', res.error); return; }
+  settingsErr = null;
+  const data = res.data;
+  {
     if (data) {
       if (Number(data.gbp_azn) > 0 && Number(data.usd_azn) > 0) rates = { gbpAzn: Number(data.gbp_azn), usdAzn: Number(data.usd_azn), base: data.base_currency || base() };
       else if (data.base_currency) rates = { ...rates, base: data.base_currency };
       if (Number(data.gold_price) > 0) goldSpot = { price: Number(data.gold_price), cur: data.gold_currency || 'AZN' };
       save('ledger.rates', rates); save('ledger.goldSpot', goldSpot);
     } else if (ratesReady() || goldSpot.price) {
-      pushSettings();
+      pushSettings(false);   // first visit: copy this device's rates up, silently
     }
-  } catch { settingsOk = false; }
-}
-function pushSettings() {
-  if (!user) return;
-  if (!settingsOk) {
-    if (!settingsWarned) { settingsWarned = true; setTimeout(() => toast('Saved on this device only. Run add_settings.sql in Supabase to share it with your phone.', 'error'), 2600); }
-    return;
   }
+}
+/* byUser = you just changed something. Only then do we bother you if it did not sync. */
+function pushSettings(byUser = true) {
+  if (!user) return;
+  pushByUser = pushByUser || byUser;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
-    const { error } = await db.from('user_settings').upsert({
+    const loud = pushByUser; pushByUser = false;
+    let error = null;
+    try { ({ error } = await db.from('user_settings').upsert({
       user_id: user.id,
       gbp_azn: Number(rates.gbpAzn) > 0 ? Number(rates.gbpAzn) : null,
       usd_azn: Number(rates.usdAzn) > 0 ? Number(rates.usdAzn) : null,
@@ -843,9 +849,21 @@ function pushSettings() {
       gold_price: Number(goldSpot.price) > 0 ? Number(goldSpot.price) : null,
       gold_currency: Number(goldSpot.price) > 0 ? goldSpot.cur : null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
-    if (error) { settingsOk = false; if (!settingsWarned) { settingsWarned = true; toast('Saved on this device only. Run add_settings.sql in Supabase to share it with your phone.', 'error'); } }
+    }, { onConflict: 'user_id' })); }
+    catch (e) { error = { message: e?.message || 'network error' }; }
+    if (!error) { settingsErr = null; return; }
+    settingsErr = error.message || 'unknown error';
+    console.warn('[settings] save failed:', error);
+    if (loud && !settingsWarned) {
+      settingsWarned = true;
+      setTimeout(() => toast('Saved on this device, but not synced to your phone. Reason: ' + settingsErr, 'error'), 1800);
+    }
   }, 250);
+}
+function syncNote() {
+  return h('div', { class: 'hint' }, settingsErr
+    ? '⚠️ Not synced with your other devices yet. Reason: ' + settingsErr
+    : '✅ Synced. Your phone and laptop use these same numbers.');
 }
 function setBase(v) {
   rates = { ...rates, base: v }; save('ledger.rates', rates);
@@ -2296,7 +2314,8 @@ function openRatesSheet() {
   openSheet('Exchange rates', h('div', null,
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Show totals in'), seg([['AZN', '₼ Manat'], ['GBP', '£ Pounds'], ['USD', '$ Dollars']], b, v => { b = v; }, { full: true })),
     h('div', { class: 'field-row' }, field('£1 in manat', g), field('$1 in manat', u)),
-    h('div', { class: 'hint box' }, 'These two rates cover all three currencies. Every page uses them, on your phone and your laptop alike.')),
+    h('div', { class: 'hint box' }, 'These two rates cover all three currencies. Every page uses them, on your phone and your laptop alike.'),
+    syncNote()),
     { onOpen: () => g.focus(), footer: btn });
 }
 
