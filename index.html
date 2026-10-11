@@ -501,6 +501,8 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 @media (min-width: 960px) { .scroller { margin: 0; padding: 2px 0; flex-wrap: wrap; overflow: visible; } }
 .filter-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .caption { font-size: 14px; color: var(--muted); font-weight: 600; }
+.currency-bar { margin: 0 0 20px; }
+.currency-bar .seg button { min-width: 44px; font-size: 16px; }
 
 /* holdings */
 .hold-head, .hold-row { display: grid; align-items: center; gap: 6px 12px; padding: 13px 14px; }
@@ -794,6 +796,61 @@ function fromAzn(a, cur, r = rates) {
   return NaN;
 }
 function conv(a, from, to, r = rates) { return fromAzn(toAzn(a, from, r), to, r); }
+
+/* show an amount in the chosen currency when it can be converted, otherwise as it is */
+function shown(a, from) {
+  if (ratesReady() && ['GBP', 'AZN', 'USD'].includes(from)) {
+    const v = conv(a, from, base());
+    if (Number.isFinite(v)) return { v, cur: base() };
+  }
+  return { v: num(a), cur: from };
+}
+function fmtShown(a, from) { const x = shown(a, from); return money(x.v, x.cur); }
+function signedShown(a, from) { const x = shown(a, from); return signed(x.v, x.cur); }
+function countShown(a, from) { const x = shown(a, from); return countEl(x.v, v => money(v, x.cur)); }
+function fmtRate(r) { return String(Number(Number(r).toFixed(4))); }
+
+/* one shared copy of the rates, display currency and gold price, kept in the database */
+let settingsOk = true, settingsWarned = false, pushTimer = null;
+async function pullSettings() {
+  try {
+    const { data, error } = await db.from('user_settings').select('*').maybeSingle();
+    if (error) { settingsOk = false; return; }
+    settingsOk = true;
+    if (data) {
+      if (Number(data.gbp_azn) > 0 && Number(data.usd_azn) > 0) rates = { gbpAzn: Number(data.gbp_azn), usdAzn: Number(data.usd_azn), base: data.base_currency || base() };
+      else if (data.base_currency) rates = { ...rates, base: data.base_currency };
+      if (Number(data.gold_price) > 0) goldSpot = { price: Number(data.gold_price), cur: data.gold_currency || 'AZN' };
+      save('ledger.rates', rates); save('ledger.goldSpot', goldSpot);
+    } else if (ratesReady() || goldSpot.price) {
+      pushSettings();
+    }
+  } catch { settingsOk = false; }
+}
+function pushSettings() {
+  if (!user) return;
+  if (!settingsOk) {
+    if (!settingsWarned) { settingsWarned = true; setTimeout(() => toast('Saved on this device only. Run add_settings.sql in Supabase to share it with your phone.', 'error'), 2600); }
+    return;
+  }
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    const { error } = await db.from('user_settings').upsert({
+      user_id: user.id,
+      gbp_azn: Number(rates.gbpAzn) > 0 ? Number(rates.gbpAzn) : null,
+      usd_azn: Number(rates.usdAzn) > 0 ? Number(rates.usdAzn) : null,
+      base_currency: base(),
+      gold_price: Number(goldSpot.price) > 0 ? Number(goldSpot.price) : null,
+      gold_currency: Number(goldSpot.price) > 0 ? goldSpot.cur : null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+    if (error) { settingsOk = false; if (!settingsWarned) { settingsWarned = true; toast('Saved on this device only. Run add_settings.sql in Supabase to share it with your phone.', 'error'); } }
+  }, 250);
+}
+function setBase(v) {
+  rates = { ...rates, base: v }; save('ledger.rates', rates);
+  pushSettings(); renderAll();
+}
 
 /* ══════════════════════════ theme ══════════════════════════ */
 function currentTheme() {
@@ -1196,6 +1253,14 @@ function sectionWith(title, note, right, ...body) {
     h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, title), note ? h('div', { class: 'section-note' }, note) : null), right),
     body);
 }
+function currencyBar() {
+  const ready = ratesReady();
+  return h('div', { class: 'filter-line currency-bar' },
+    h('span', { class: 'caption' }, 'Show in'),
+    seg([['GBP', '£'], ['AZN', '₼'], ['USD', '$']], base(), setBase),
+    h('button', { class: 'btn btn-ghost sm', onclick: openRatesSheet },
+      ready ? '💱 £1 = ₼' + fmtRate(rates.gbpAzn) + ', $1 = ₼' + fmtRate(rates.usdAzn) : '💱 Set rates'));
+}
 function stat(label, value, note, cls = '') { return h('div', { class: 'stat' }, h('div', { class: 'stat-label' }, label), h('div', { class: 'stat-value ' + cls }, value), note ? h('div', { class: 'stat-note' }, note) : null); }
 function empty(emoji, text, action) {
   return h('div', { class: 'empty' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, emoji), text,
@@ -1299,6 +1364,7 @@ function beginView(name) {
 /* ══════════════════════════ data ══════════════════════════ */
 async function refreshAll(first = false) {
   if (!user) return;
+  const settingsDone = pullSettings();
   const [e, t, g, th, p, ac, sn] = await Promise.all([
     db.from('entries').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
     db.from('trades').select('*').order('trade_date', { ascending: false }).order('created_at', { ascending: false }),
@@ -1319,6 +1385,7 @@ async function refreshAll(first = false) {
   cache.priceStamp = stamps.length ? stamps[stamps.length - 1] : null;
   cache.accounts  = ac.data || [];
   cache.snapshots = sn.data || [];
+  await settingsDone;
   renderAll();
   if (first) playIntro(ui.view);
 }
@@ -1500,6 +1567,7 @@ function currencyBlock(rows, cur) {
 function renderInvest() {
   const root = beginView('invest');
   root.appendChild(pageHead('invest', { label: 'Add trade', onclick: () => openTradeSheet() }));
+  root.appendChild(currencyBar());
 
   const totalWith = cache.trades.reduce((a, t) => a + tradeMath(t).total, 0);
   const totalComm = cache.trades.reduce((a, t) => a + num(t.commission), 0);
@@ -1519,20 +1587,20 @@ function renderInvest() {
 
   root.appendChild(h('div', { class: 'hero' },
     h('div', { class: 'hero-label' }, 'Portfolio value'),
-    h('div', { class: 'hero-nums' }, priced.length ? countEl(value, v => money(v, 'USD')) : h('span', { class: 'hero-num zero' }, 'Add prices')),
+    h('div', { class: 'hero-nums' }, priced.length ? countShown(value, 'USD') : h('span', { class: 'hero-num zero' }, 'Add prices')),
     h('div', { class: 'hero-sub' },
-      priced.length ? h('span', { class: 'chip ' + (gain >= 0 ? 'good' : 'bad') }, (gain >= 0 ? '▲ ' : '▼ ') + signed(gain, 'USD') + ' (' + pct(basis ? gain / basis * 100 : 0) + ')') : null,
+      priced.length ? h('span', { class: 'chip ' + (gain >= 0 ? 'good' : 'bad') }, (gain >= 0 ? '▲ ' : '▼ ') + signedShown(gain, 'USD') + ' (' + pct(basis ? gain / basis * 100 : 0) + ')') : null,
       h('span', null, allPriced ? 'since you bought' : priced.length ? 'on the holdings that have a price' : 'Press Refresh prices below'))));
 
   root.appendChild(h('div', { class: 'stats four' },
-    stat('Invested', money(totalWith, 'USD'), 'including commission'),
-    stat('Shares only', money(totalNo, 'USD'), 'without commission'),
-    stat('Commission', money(totalComm, 'USD'), totalNo > 0 ? plainPct(totalComm / totalNo * 100, 2) + ' of what you invested' : ''),
+    stat('Invested', fmtShown(totalWith, 'USD'), 'including commission'),
+    stat('Shares only', fmtShown(totalNo, 'USD'), 'without commission'),
+    stat('Commission', fmtShown(totalComm, 'USD'), totalNo > 0 ? plainPct(totalComm / totalNo * 100, 2) + ' of what you invested' : ''),
     stat('Spent in manat', money(totalAzn, 'AZN'), 'at the rate on each day')));
 
   if (priced.length) {
     root.appendChild(section('How it is split', 'Each colour stays with its fund, so you can follow it over time.',
-      h('div', { class: 'panel' }, stackBar(priced.map(x => ({ label: x.ticker, value: x.value, color: tickerColor(x.ticker) })), v => money(v, 'USD')))));
+      h('div', { class: 'panel' }, stackBar(priced.map(x => ({ label: x.ticker, value: x.value, color: tickerColor(x.ticker) })), v => fmtShown(v, 'USD')))));
   }
 
   const holdList = h('div', { class: 'list' },
@@ -1543,7 +1611,8 @@ function renderInvest() {
   const stamp = cache.priceStamp ? 'Prices from ' + new Date(cache.priceStamp).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'No prices saved yet';
   const refreshBtn = h('button', { class: 'btn btn-soft sm', onclick: refreshPrices }, '↻ Refresh prices');
   root.appendChild(sectionWith('Holdings', stamp, refreshBtn, holdList,
-    h('div', { class: 'foot-note' }, 'Type a price by hand if the refresh ever fails. It saves when you leave the box.')));
+    h('div', { class: 'foot-note' }, (shown(1, 'USD').cur !== 'USD' ? 'Share prices stay in dollars, as your broker shows them. Totals are converted at your rates. ' : '') +
+      'Type a price by hand if the refresh ever fails. It saves when you leave the box.')));
 
   if (closed.length) {
     root.appendChild(section('Sold completely', null, h('div', { class: 'list' }, closed.map(x => {
@@ -1551,7 +1620,7 @@ function renderInvest() {
       return h('div', { class: 'row no-del' },
         h('div', { class: 'bubble emo', 'aria-hidden': 'true' }, '🏁'),
         h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, x.ticker), h('div', { class: 'row-sub' }, 'Profit or loss after fees')),
-        h('div', { class: 'amt' }, h('span', { class: 'chip ' + (realised >= 0 ? 'good' : 'bad') }, signed(realised, 'USD'))));
+        h('div', { class: 'amt' }, h('span', { class: 'chip ' + (realised >= 0 ? 'good' : 'bad') }, signedShown(realised, 'USD'))));
     }))));
   }
 
@@ -1574,17 +1643,17 @@ function holdingRow(x, total) {
   const inp = h('input', { class: 'px-input', type: 'text', inputmode: 'decimal', value: x.price !== null ? String(x.price) : '', placeholder: '0.00', 'aria-label': 'Current price of ' + x.ticker });
   inp.addEventListener('change', () => { const v = parseAmount(inp.value); if (v > 0) savePrice(x.ticker, v); else shake(inp); });
   const gainChip = x.gain === null ? h('span', { class: 'chip neutral' }, 'no price')
-    : h('span', { class: 'chip ' + (x.gain >= 0 ? 'good' : 'bad') }, signed(x.gain, 'USD'));
+    : h('span', { class: 'chip ' + (x.gain >= 0 ? 'good' : 'bad') }, signedShown(x.gain, 'USD'));
   const gp = x.gain === null || !x.netUsd ? '—' : pct(x.gain / x.netUsd * 100);
   return h('div', { class: 'hold-row' },
     h('div', { class: 'h-tick' }, h('i', { class: 'dot', style: { background: color } }), x.ticker),
     h('div', { class: 'h-meta' }, qty(x.shares) + (num(x.shares) === 1 ? ' share' : ' shares') + ', average ' + money(x.avg, 'USD')),
     h('div', { class: 'h-shares' }, qty(x.shares)),
-    h('div', { class: 'h-netin' }, money(x.netUsd, 'USD')),
+    h('div', { class: 'h-netin' }, fmtShown(x.netUsd, 'USD')),
     h('div', { class: 'h-avg' }, money(x.avg, 'USD')),
     h('div', { class: 'h-price' }, h('span', { class: 'plabel' }, 'Price now'), inp,
       h('span', { class: 'plabel' }, x.value !== null && total ? plainPct(x.value / total * 100) + ' of portfolio' : '')),
-    h('div', { class: 'h-value' }, x.value !== null ? money(x.value, 'USD') : '—'),
+    h('div', { class: 'h-value' }, x.value !== null ? fmtShown(x.value, 'USD') : '—'),
     h('div', { class: 'h-gain' }, gainChip),
     h('div', { class: 'h-pct ' + (x.gain === null ? '' : x.gain >= 0 ? 'pos' : 'neg') }, gp),
     h('div', { class: 'h-weight' }, x.value !== null && total ? plainPct(x.value / total * 100) : '—'));
@@ -1617,17 +1686,22 @@ function thesisCard(x) {
 function renderGold() {
   const root = beginView('gold');
   root.appendChild(pageHead('gold', { label: 'Add gold', onclick: () => openGoldSheet() }));
+  root.appendChild(currencyBar());
   const items = cache.gold;
   const gross = items.reduce((a, i) => a + num(i.grams), 0);
   const pure = items.reduce((a, i) => a + pureGrams(i), 0);
   const val = goldValueTotal();
   const paidBy = {};
   items.forEach(i => { if (num(i.paid) > 0) paidBy[i.currency] = (paidBy[i.currency] || 0) + num(i.paid); });
-  const paidTxt = Object.entries(paidBy).map(([c, v]) => money(v, c)).join(' and ') || money(0, 'AZN');
+  const paidEntries = Object.entries(paidBy);
+  const canSum = ratesReady() && paidEntries.every(([c]) => ['GBP', 'AZN', 'USD'].includes(c));
+  const paidTxt = !paidEntries.length ? fmtShown(0, 'AZN')
+    : canSum ? money(paidEntries.reduce((a, [c, v]) => a + conv(v, c, base()), 0), base())
+    : paidEntries.map(([c, v]) => money(v, c)).join(' and ');
 
   root.appendChild(h('div', { class: 'hero' },
     h('div', { class: 'hero-label' }, 'Worth today'),
-    h('div', { class: 'hero-nums' }, val !== null && items.length ? countEl(val, v => money(v, goldSpot.cur)) : h('span', { class: 'hero-num zero' }, items.length ? 'Add a price' : money(0, 'AZN'))),
+    h('div', { class: 'hero-nums' }, val !== null && items.length ? countShown(val, goldSpot.cur) : h('span', { class: 'hero-num zero' }, items.length ? 'Add a price' : fmtShown(0, 'AZN'))),
     h('div', { class: 'hero-sub' },
       h('span', { class: 'chip gold' }, grams(pure) + ' pure gold'),
       h('span', null, 'in ' + grams(gross) + ' on the scale'))));
@@ -1645,7 +1719,7 @@ function renderGold() {
   const saveBtn = h('button', { class: 'btn btn-primary', onclick: () => {
     const p = parseAmount(priceIn.value);
     if (!(p > 0)) return shake(priceIn);
-    goldSpot = { price: p, cur: spotCur }; save('ledger.goldSpot', goldSpot);
+    goldSpot = { price: p, cur: spotCur }; save('ledger.goldSpot', goldSpot); pushSettings();
     toast('Gold price saved'); renderGold(); renderNetWorth(); renderAnalysis();
   } }, 'Save price');
   root.appendChild(section('Today’s gold price', 'The price of one gram of pure 24 karat gold. Every piece is valued from this, adjusted for its purity.',
@@ -1661,7 +1735,7 @@ function renderGold() {
       h('div', { class: 'row-main' },
         h('div', { class: 'row-title' }, i.item_name, h('span', { class: 'badge gold' }, num(i.karat) + 'K'), i.is_gift ? h('span', { class: 'badge' }, 'gift') : null),
         h('div', { class: 'row-sub wrap' }, grams(pureGrams(i)) + ' pure in ' + grams(i.grams) + ', ' + fmtDate(i.buy_date) + (num(i.paid) ? ', paid ' + money(i.paid, i.currency) : ''))),
-      h('div', null, h('div', { class: 'amt' }, v === null ? '—' : money(v, goldSpot.cur)), h('div', { class: 'amt-sub' }, 'today')),
+      h('div', null, h('div', { class: 'amt' }, v === null ? '—' : fmtShown(v, goldSpot.cur)), h('div', { class: 'amt-sub' }, 'today')),
       delBtn(() => removeRow('gold_items', i.id, 'this gold item'), 'Delete ' + i.item_name));
   })) : h('div', { class: 'list' }, empty('💍', 'No gold recorded yet.', { label: 'Add gold', onclick: () => openGoldSheet() }))));
 }
@@ -1677,6 +1751,7 @@ function goldEmoji(name) {
 function renderNetWorth() {
   const root = beginView('networth');
   root.appendChild(pageHead('networth', { label: 'Add account', onclick: () => openAddAccountSheet() }));
+  root.appendChild(currencyBar());
   const b = base(), ready = ratesReady();
 
   if (!ready) root.appendChild(ratesCallout());
@@ -1840,10 +1915,7 @@ function renderAnalysis() {
         range.from = f.value; range.to = tt.value; save('ledger.range', range); renderAnalysis();
       } }, 'Apply')));
   }
-  const curSeg = seg([['GBP', '£'], ['AZN', '₼'], ['USD', '$']], b, v => { rates.base = v; save('ledger.rates', rates); renderAll(); });
-  filters.appendChild(h('div', { class: 'filter-line' },
-    h('span', { class: 'caption' }, 'Show in'), curSeg,
-    h('button', { class: 'btn btn-ghost sm', onclick: openRatesSheet }, ready ? '💱 £1 = ₼' + rates.gbpAzn + ', $1 = ₼' + rates.usdAzn : '💱 Set rates')));
+  filters.appendChild(currencyBar());
   root.appendChild(filters);
 
   const n = Math.max(0, daysBetween(r.from, end) + 1);
@@ -2218,13 +2290,13 @@ function openRatesSheet() {
     const gv = parseAmount(g.value), uv = parseAmount(u.value);
     if (!(gv > 0)) return shake(g);
     if (!(uv > 0)) return shake(u);
-    rates = { gbpAzn: gv, usdAzn: uv, base: b }; save('ledger.rates', rates);
+    rates = { gbpAzn: gv, usdAzn: uv, base: b }; save('ledger.rates', rates); pushSettings();
     closeSheet(); toast('Rates saved. Showing everything in ' + CUR_NAME[b].toLowerCase()); renderAll();
   });
   openSheet('Exchange rates', h('div', null,
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Show totals in'), seg([['AZN', '₼ Manat'], ['GBP', '£ Pounds'], ['USD', '$ Dollars']], b, v => { b = v; }, { full: true })),
     h('div', { class: 'field-row' }, field('£1 in manat', g), field('$1 in manat', u)),
-    h('div', { class: 'hint box' }, 'These two rates cover all three currencies. They are saved on this device, so update them when they move.')),
+    h('div', { class: 'hint box' }, 'These two rates cover all three currencies. Every page uses them, on your phone and your laptop alike.')),
     { onOpen: () => g.focus(), footer: btn });
 }
 
@@ -2287,7 +2359,7 @@ async function fetchGoldPrice(want, btn) {
     let value, cur, how;
     if (want === 'AZN' && aznPerUsd) { value = usdG * aznPerUsd; cur = 'AZN'; how = money(usdG, 'USD') + ' a gram at ' + num(aznPerUsd).toFixed(4) + ' manat to the dollar'; }
     else { value = usdG; cur = 'USD'; how = money(usdG, 'USD') + ' a gram' + (want !== 'USD' ? '. Only dollars and manat can be fetched, so this is in dollars' : ''); }
-    goldSpot = { price: Number(value.toFixed(2)), cur }; save('ledger.goldSpot', goldSpot);
+    goldSpot = { price: Number(value.toFixed(2)), cur }; save('ledger.goldSpot', goldSpot); pushSettings();
     ui.goldStamp = 'Gold is ' + money(oz, 'USD') + ' an ounce, so ' + how + '. Fetched ' + new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. This is the market price; a shop pays a little less.';
     toast('Gold price updated');
     renderGold(); renderNetWorth(); renderAnalysis();
