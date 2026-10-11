@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#f2f5fa">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -101,6 +101,9 @@ body {
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+button, a, input, select, textarea, label, .cat, .pill, .tab, .heat-cell, .stack-seg { touch-action: manipulation; }
+input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; display: block; }
+input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value { text-align: left; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
 [hidden] { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -359,22 +362,37 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .pill.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
 
 /* sheet */
-.sheet-wrap { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
-.sheet-backdrop { position: absolute; inset: 0; background: var(--backdrop); opacity: 0; transition: opacity .28s; }
+.sheet-wrap { position: fixed; left: 0; right: 0; top: 0; height: 100%; z-index: 60; display: flex; align-items: flex-end; justify-content: center; }
+.sheet-backdrop { position: absolute; inset: 0; background: var(--backdrop); opacity: 0; transition: opacity .28s; touch-action: none; }
 .sheet {
-  position: relative; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; overscroll-behavior: contain;
-  background: var(--surface); border-radius: 28px 28px 0 0; padding: 10px 20px calc(24px + env(safe-area-inset-bottom));
-  transform: translateY(100%); transition: transform .36s var(--ease); box-shadow: var(--shadow-float);
+  position: relative; width: 100%; max-width: 560px; max-height: calc(100% - 10px);
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); border-radius: 28px 28px 0 0;
+  transform: translateY(100%); transition: transform .34s var(--ease); box-shadow: var(--shadow-float);
 }
+.sheet.dragging { transition: none; }
 .sheet-wrap.open .sheet-backdrop { opacity: 1; }
 .sheet-wrap.open .sheet { transform: none; }
-.grab { width: 42px; height: 5px; border-radius: 3px; background: var(--line-2); margin: 0 auto 10px; }
-.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 16px; }
-.sheet-title { font-family: var(--font-display); font-weight: 700; font-size: 23px; letter-spacing: -.02em; }
+.sheet-top { flex: none; padding: 8px 20px 4px; touch-action: none; cursor: grab; }
+.grab { width: 42px; height: 5px; border-radius: 3px; background: var(--line-2); margin: 0 auto 8px; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.sheet-title { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -.02em; }
+.sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 8px 20px 16px; }
+.sheet-foot { flex: none; padding: 12px 20px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--surface); }
+.kb-open .sheet-foot { padding-bottom: 12px; }
+.foot-row { display: flex; gap: 10px; align-items: center; }
+.foot-row .btn { flex: 1; min-width: 0; height: 54px; }
+.foot-row .date-chip { height: 54px; flex: none; }
+.date-chip { position: relative; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--line); background: var(--surface); font-weight: 700; font-size: 14px; color: var(--ink-2); cursor: pointer; }
+.date-chip input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 @media (min-width: 960px) {
   .sheet-wrap { align-items: center; padding: 24px; }
-  .sheet { border-radius: 28px; padding: 24px 26px 26px; transform: translateY(18px) scale(.97); opacity: 0; transition: transform .3s var(--ease), opacity .22s; }
+  .sheet { border-radius: 28px; max-height: calc(100% - 48px); transform: translateY(18px) scale(.97); opacity: 0; transition: transform .3s var(--ease), opacity .22s; }
   .sheet-wrap.open .sheet { opacity: 1; transform: none; }
+  .sheet-top { padding: 20px 26px 4px; cursor: default; }
+  .sheet-body { padding: 8px 26px 18px; }
+  .sheet-foot { padding: 14px 26px 22px; }
   .grab { display: none; }
 }
 
@@ -498,7 +516,7 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
 .px-input, .bal-input {
   width: 108px; height: 38px; border-radius: 10px; border: 1.5px solid var(--line-2); background: var(--surface-2);
-  color: var(--ink); font: 800 15px var(--font-ui); text-align: right; padding: 0 10px; font-variant-numeric: tabular-nums;
+  color: var(--ink); font: 800 16px var(--font-ui); text-align: right; padding: 0 10px; font-variant-numeric: tabular-nums;
 }
 .px-input:focus, .bal-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
 @media (min-width: 900px) {
@@ -850,28 +868,74 @@ window.addEventListener('scroll', () => hideTip(), { passive: true });
 
 /* ══════════════════════════ sheet ══════════════════════════ */
 let openSheetEl = null;
-function openSheet(title, body, { onOpen } = {}) {
+const finePointer = () => matchMedia('(pointer: fine)').matches;
+function lockScroll() {
+  const y = window.scrollY;
+  Object.assign(document.body.style, { position: 'fixed', top: -y + 'px', left: '0', right: '0', width: '100%' });
+  return () => { Object.assign(document.body.style, { position: '', top: '', left: '', right: '', width: '' }); window.scrollTo(0, y); };
+}
+function openSheet(title, body, { onOpen, footer } = {}) {
   closeSheet(true);
   const wrap = h('div', { class: 'sheet-wrap', role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
   const backdrop = h('div', { class: 'sheet-backdrop', onclick: () => closeSheet() });
-  const sheet = h('div', { class: 'sheet' },
+  const top = h('div', { class: 'sheet-top' },
     h('div', { class: 'grab', 'aria-hidden': 'true' }),
     h('div', { class: 'sheet-head' },
       h('div', { class: 'sheet-title' }, title),
-      h('button', { class: 'round-btn', 'aria-label': 'Close', onclick: () => closeSheet() }, '✕')),
-    body);
+      h('button', { class: 'round-btn', 'aria-label': 'Close', onclick: () => closeSheet() }, '✕')));
+  const scroller = h('div', { class: 'sheet-body' }, body);
+  const sheet = h('div', { class: 'sheet' }, top, scroller, footer ? h('div', { class: 'sheet-foot' }, footer) : null);
   wrap.append(backdrop, sheet);
   document.body.appendChild(wrap);
-  document.body.style.overflow = 'hidden';
+  const unlock = lockScroll();
+
+  /* keep the sheet above the on-screen keyboard (iOS does not resize the page for it) */
+  const vv = window.visualViewport;
+  const sync = () => {
+    if (!vv) return;
+    wrap.style.top = vv.offsetTop + 'px';
+    wrap.style.height = vv.height + 'px';
+    wrap.classList.toggle('kb-open', vv.height < window.innerHeight * 0.8);
+  };
+  vv?.addEventListener('resize', sync); vv?.addEventListener('scroll', sync); sync();
+
+  /* when a field gets focus, bring it into view once the keyboard has settled */
+  scroller.addEventListener('focusin', e => {
+    const el = e.target;
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+    setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 320);
+  });
+
+  /* swipe the top of the sheet down to close it */
+  let startY = null, dy = 0;
+  top.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || e.target.closest('button')) return;
+    startY = e.clientY; dy = 0; sheet.classList.add('dragging'); try { top.setPointerCapture(e.pointerId); } catch { /* pointer already gone */ }
+  });
+  top.addEventListener('pointermove', e => {
+    if (startY === null) return;
+    dy = Math.max(0, e.clientY - startY);
+    sheet.style.transform = `translateY(${dy}px)`;
+  });
+  const endDrag = () => {
+    if (startY === null) return;
+    startY = null; sheet.classList.remove('dragging'); sheet.style.transform = '';
+    if (dy > 90) closeSheet();
+  };
+  top.addEventListener('pointerup', endDrag); top.addEventListener('pointercancel', endDrag);
+
+  wrap._cleanup = () => { vv?.removeEventListener('resize', sync); vv?.removeEventListener('scroll', sync); unlock(); };
   openSheetEl = wrap;
   requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('open')));
-  setTimeout(() => { onOpen?.(); }, 340);
+  /* only jump into a field on a computer; on a phone the keyboard would cover the choices */
+  if (finePointer()) setTimeout(() => { onOpen?.(); }, 340);
 }
 function closeSheet(instant = false) {
   const wrap = openSheetEl;
   if (!wrap) return;
   openSheetEl = null;
-  document.body.style.overflow = '';
+  if (document.activeElement && wrap.contains(document.activeElement)) document.activeElement.blur();
+  wrap._cleanup?.();
   if (instant) { wrap.remove(); return; }
   wrap.classList.remove('open');
   setTimeout(() => wrap.remove(), 380);
@@ -1335,12 +1399,22 @@ function renderExpenses() {
 
   const dayRows = cache.entries.filter(e => e.date === day);
   const out = sumByCur(dayRows, 'expense'), inc = sumByCur(dayRows, 'income');
-  const outCurs = ['GBP', 'AZN'].filter(c => out[c] > 0), inCurs = ['GBP', 'AZN'].filter(c => inc[c] > 0);
+  const order = c => (c === base() ? 0 : 1);
+  const outCurs = ['GBP', 'AZN'].filter(c => out[c] > 0).sort((a, b) => order(a) - order(b));
+  const inCurs = ['GBP', 'AZN'].filter(c => inc[c] > 0);
+  const combine = outCurs.length > 1 && ratesReady();
+  const b = base();
+  const combined = combine ? outCurs.reduce((a, c) => a + conv(out[c], c, b), 0) : 0;
+  let nums;
+  if (combine) nums = countEl(combined, v => money(v, b));
+  else if (outCurs.length) nums = outCurs.map(c => countEl(out[c], v => money(v, c)));
+  else nums = h('span', { class: 'hero-num zero' }, money(0, load('ledger.lastCur', 'GBP')));
   root.appendChild(h('div', { class: 'hero' },
     h('div', { class: 'hero-label' }, day === t ? 'Spent today' : 'Spent on ' + fmtDay(day)),
-    h('div', { class: 'hero-nums' + (outCurs.length > 1 ? ' two' : '') },
-      outCurs.length ? outCurs.map(c => countEl(out[c], v => money(v, c))) : h('span', { class: 'hero-num zero' }, money(0, load('ledger.lastCur', 'GBP')))),
+    h('div', { class: 'hero-nums' + (!combine && outCurs.length > 1 ? ' two' : '') }, nums),
     h('div', { class: 'hero-sub' },
+      combine ? [outCurs.map((c, i) => [i ? h('span', { 'aria-hidden': 'true' }, '+') : null, h('span', { class: 'chip neutral' }, money(out[c], c))]),
+        h('span', null, 'at your rates')] : null,
       inCurs.map(c => h('span', { class: 'chip good' }, signed(inc[c], c) + ' in')),
       h('span', null, dayRows.length ? dayRows.length + (dayRows.length === 1 ? ' entry' : ' entries') : 'Nothing logged yet'))));
 
@@ -1925,13 +1999,25 @@ function portfolioChecks(b) {
 /* ══════════════════════════ SHEETS ══════════════════════════ */
 function openEntrySheet() {
   const st = { type: 'expense', cur: load('ledger.lastCur', 'GBP'), cat: null, sub: null, date: ui.day };
-  const amount = h('input', { class: 'amount-input', type: 'text', inputmode: 'decimal', placeholder: '0.00', 'aria-label': 'Amount', autocomplete: 'off' });
-  const desc = h('input', { class: 'input', type: 'text', maxlength: 200, placeholder: 'What was it for?', id: 'eDesc' });
-  const date = h('input', { class: 'input', type: 'date', value: st.date, id: 'eDate' });
+  const amount = h('input', { class: 'amount-input', type: 'text', inputmode: 'decimal', placeholder: '0.00', 'aria-label': 'Amount', autocomplete: 'off', enterkeyhint: 'done' });
+  const desc = h('input', { class: 'input', type: 'text', maxlength: 200, placeholder: 'Optional', enterkeyhint: 'done' });
+  const dateLabel = h('span', null, dayTitle(st.date));
+  const date = h('input', { type: 'date', value: st.date, 'aria-label': 'Date',
+    onchange: e => { if (e.target.value) { st.date = e.target.value; dateLabel.textContent = dayTitle(st.date); } } });
+  const dateChip = h('label', { class: 'date-chip', onclick: () => { try { date.showPicker?.(); } catch { /* not allowed */ } } },
+    h('span', { class: 'emo', 'aria-hidden': 'true' }, '📅'), dateLabel, date);
   const catGrid = h('div', { class: 'cat-grid', role: 'radiogroup', 'aria-label': 'Category' });
   const subWrap = h('div', { class: 'field', hidden: true }, h('span', { class: 'field-label' }, 'What kind?'));
   const subGrid = h('div', { class: 'pill-grid' }); subWrap.appendChild(subGrid);
-  const saveBtn = h('button', { class: 'btn btn-primary block' }, 'Save expense');
+  const saveBtn = h('button', { class: 'btn btn-primary' }, 'Save expense');
+  const label = () => {
+    const a = parseAmount(amount.value);
+    const kind = st.type === 'expense' ? 'expense' : 'income';
+    saveBtn.textContent = a > 0 ? 'Save ' + money(a, st.cur) + ' ' + kind : 'Save ' + kind;
+  };
+  amount.addEventListener('input', label);
+  amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); amount.blur(); } });
+  desc.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } });
 
   const paintCats = () => {
     clear(catGrid);
@@ -1947,10 +2033,9 @@ function openEntrySheet() {
       h('span', { class: 'emo', 'aria-hidden': 'true' }, SUB_EMOJI[sb] || ''), sb)));
   };
   const typeSeg = seg([['expense', 'Expense', 'out'], ['income', 'Income', 'in']], st.type, v => {
-    st.type = v; st.cat = null; st.sub = null; paintCats(); paintSubs();
-    saveBtn.textContent = v === 'expense' ? 'Save expense' : 'Save income';
+    st.type = v; st.cat = null; st.sub = null; paintCats(); paintSubs(); label();
   }, { full: true });
-  const curSeg = seg([['GBP', '£'], ['AZN', '₼']], st.cur, v => { st.cur = v; });
+  const curSeg = seg([['GBP', '£'], ['AZN', '₼']], st.cur, v => { st.cur = v; label(); });
   paintCats(); paintSubs();
 
   saveBtn.addEventListener('click', async () => {
@@ -1960,13 +2045,13 @@ function openEntrySheet() {
     const d = desc.value.trim() || st.sub || st.cat;
     saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
     const { error } = await db.from('entries').insert([{
-      date: date.value || st.date, type: st.type, amount: a, currency: st.cur,
+      date: st.date, type: st.type, amount: a, currency: st.cur,
       description: d, category: st.cat, subcategory: st.sub, user_id: user.id,
     }]);
-    saveBtn.disabled = false; saveBtn.textContent = st.type === 'expense' ? 'Save expense' : 'Save income';
+    saveBtn.disabled = false; label();
     if (error) return toast('Could not save: ' + error.message, 'error');
     save('ledger.lastCur', st.cur);
-    ui.day = date.value || st.date; ui.month = ui.day.slice(0, 7);
+    ui.day = st.date; ui.month = ui.day.slice(0, 7);
     ui.flashKey = ui.day + '|' + d + '|' + a;
     closeSheet();
     toast(st.type === 'expense' ? 'Expense saved' : 'Income saved');
@@ -1978,8 +2063,8 @@ function openEntrySheet() {
     h('div', { class: 'amount-wrap' }, amount, curSeg),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Category'), catGrid),
     subWrap,
-    h('div', { class: 'field-row' }, field('Note', desc), field('Date', date)),
-    saveBtn), { onOpen: () => amount.focus() });
+    field('Note', desc)),
+    { onOpen: () => amount.focus(), footer: h('div', { class: 'foot-row' }, dateChip, saveBtn) });
 }
 
 function openTradeSheet() {
@@ -2023,7 +2108,7 @@ function openTradeSheet() {
     h('div', { class: 'field-row' }, field('Price per share, $', f.price), field('Fee, $', f.comm)),
     h('div', { class: 'field-row' }, field('Date', f.date), field('Time', f.time)),
     h('div', { class: 'field-row' }, field('Manat per $1', f.fx), field('Platform', f.plat)),
-    field('Note', f.note), preview, h('div', { style: { height: '12px' } }), btn), { onOpen: () => f.ticker.focus() });
+    field('Note', f.note), preview), { onOpen: () => f.ticker.focus(), footer: btn });
 }
 
 function openGoldSheet() {
@@ -2070,8 +2155,7 @@ function openGoldSheet() {
     preview, h('div', { style: { height: '14px' } }),
     h('div', { class: 'field-row' }, field('Price per gram', f.ppg), paidField),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Currency'), seg([['AZN', '₼'], ['TRY', '₺'], ['USD', '$'], ['GBP', '£']], cur, v => { cur = v; })),
-    h('div', { class: 'field-row' }, field('Date', f.date), field('Note', f.note)),
-    btn), { onOpen: () => f.name.focus() });
+    h('div', { class: 'field-row' }, field('Date', f.date), field('Note', f.note))), { onOpen: () => f.name.focus(), footer: btn });
 }
 
 function openAddAccountSheet() {
@@ -2096,7 +2180,7 @@ function openAddAccountSheet() {
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Kind'), kinds),
     h('div', { class: 'field-row' }, field('Balance', bal), h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Currency'),
       h('div', { style: { overflowX: 'auto' } }, seg([['AZN', '₼'], ['GBP', '£'], ['USD', '$'], ['TRY', '₺'], ['EUR', '€']], cur, v => { cur = v; })))),
-    field('Note', note), btn), { onOpen: () => name.focus() });
+    field('Note', note)), { onOpen: () => name.focus(), footer: btn });
 }
 
 function openThesisSheet(existing) {
@@ -2121,8 +2205,8 @@ function openThesisSheet(existing) {
   openSheet(existing ? 'Edit note' : 'Add a note', h('div', null,
     h('div', { class: 'field' }, seg([['owned', 'I own it'], ['watching', 'Watching']], status, v => { status = v; }, { full: true })),
     h('div', { class: 'field-row' }, field('Fund', tk), field('Company', co)),
-    field('Why I own it', why), field('What would make me sell', sell), field('Next earnings date', dt), btn),
-    { onOpen: () => (existing ? why : tk).focus() });
+    field('Why I own it', why), field('What would make me sell', sell), field('Next earnings date', dt)),
+    { onOpen: () => (existing ? why : tk).focus(), footer: btn });
 }
 
 function openRatesSheet() {
@@ -2140,8 +2224,8 @@ function openRatesSheet() {
   openSheet('Exchange rates', h('div', null,
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Show totals in'), seg([['AZN', '₼ Manat'], ['GBP', '£ Pounds'], ['USD', '$ Dollars']], b, v => { b = v; }, { full: true })),
     h('div', { class: 'field-row' }, field('£1 in manat', g), field('$1 in manat', u)),
-    h('div', { class: 'hint box', style: { marginBottom: '16px' } }, 'These two rates cover all three currencies. They are saved on this device, so update them when they move.'),
-    btn), { onOpen: () => g.focus() });
+    h('div', { class: 'hint box' }, 'These two rates cover all three currencies. They are saved on this device, so update them when they move.')),
+    { onOpen: () => g.focus(), footer: btn });
 }
 
 function openAccountSheet() {
