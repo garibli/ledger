@@ -810,28 +810,26 @@ function signedShown(a, from) { const x = shown(a, from); return signed(x.v, x.c
 function countShown(a, from) { const x = shown(a, from); return countEl(x.v, v => money(v, x.cur)); }
 function fmtRate(r) { return String(Number(Number(r).toFixed(4))); }
 
-/* one shared copy of the rates, display currency and gold price, kept in the database */
+/* one shared copy of the rates, display currency and gold price.
+   Kept as a few special rows in the prices table (names start with @),
+   so it needs no extra table in Supabase. */
+const SET_BASES = ['AZN', 'GBP', 'USD'], SET_GOLDCUR = ['AZN', 'GBP', 'USD', 'TRY'];
+const isSettingRow = t => String(t).startsWith('@');
 let settingsErr = null, settingsWarned = false, pushTimer = null, pushByUser = false;
-async function readSettings() {
-  try { return await db.from('user_settings').select('*').maybeSingle(); }
-  catch (e) { return { error: { message: e?.message || 'network error' } }; }
-}
-async function pullSettings() {
-  let res = await readSettings();
-  if (res.error) { await new Promise(r => setTimeout(r, 1500)); res = await readSettings(); }   // one quiet retry
-  if (res.error) { settingsErr = res.error.message || 'unknown error'; console.warn('[settings] read failed:', res.error); return; }
+/* called with the rows of the prices table every time data loads */
+function applySettings(rows, readError) {
+  if (readError) { settingsErr = readError.message || 'unknown error'; return; }
   settingsErr = null;
-  const data = res.data;
-  {
-    if (data) {
-      if (Number(data.gbp_azn) > 0 && Number(data.usd_azn) > 0) rates = { gbpAzn: Number(data.gbp_azn), usdAzn: Number(data.usd_azn), base: data.base_currency || base() };
-      else if (data.base_currency) rates = { ...rates, base: data.base_currency };
-      if (Number(data.gold_price) > 0) goldSpot = { price: Number(data.gold_price), cur: data.gold_currency || 'AZN' };
-      save('ledger.rates', rates); save('ledger.goldSpot', goldSpot);
-    } else if (ratesReady() || goldSpot.price) {
-      pushSettings(false);   // first visit: copy this device's rates up, silently
-    }
+  const m = Object.fromEntries((rows || []).filter(r => isSettingRow(r.ticker)).map(r => [r.ticker, Number(r.price)]));
+  if (!Object.keys(m).length) {
+    if (ratesReady() || goldSpot.price) pushSettings(false);   // first visit: copy this device's numbers up, silently
+    return;
   }
+  const b = SET_BASES[m['@BASE']] || base();
+  if (m['@GBPAZN'] > 0 && m['@USDAZN'] > 0) rates = { gbpAzn: m['@GBPAZN'], usdAzn: m['@USDAZN'], base: b };
+  else rates = { ...rates, base: b };
+  if (m['@GOLD'] > 0) goldSpot = { price: m['@GOLD'], cur: SET_GOLDCUR[m['@GOLDCUR']] || 'AZN' };
+  save('ledger.rates', rates); save('ledger.goldSpot', goldSpot);
 }
 /* byUser = you just changed something. Only then do we bother you if it did not sync. */
 function pushSettings(byUser = true) {
@@ -841,22 +839,17 @@ function pushSettings(byUser = true) {
   pushTimer = setTimeout(async () => {
     const loud = pushByUser; pushByUser = false;
     let error = null;
-    try { ({ error } = await db.from('user_settings').upsert({
-      user_id: user.id,
-      gbp_azn: Number(rates.gbpAzn) > 0 ? Number(rates.gbpAzn) : null,
-      usd_azn: Number(rates.usdAzn) > 0 ? Number(rates.usdAzn) : null,
-      base_currency: base(),
-      gold_price: Number(goldSpot.price) > 0 ? Number(goldSpot.price) : null,
-      gold_currency: Number(goldSpot.price) > 0 ? goldSpot.cur : null,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' })); }
+    const now = new Date().toISOString(), rows = [{ ticker: '@BASE', price: Math.max(0, SET_BASES.indexOf(base())) }];
+    if (Number(rates.gbpAzn) > 0 && Number(rates.usdAzn) > 0) rows.push({ ticker: '@GBPAZN', price: Number(rates.gbpAzn) }, { ticker: '@USDAZN', price: Number(rates.usdAzn) });
+    if (Number(goldSpot.price) > 0) rows.push({ ticker: '@GOLD', price: Number(goldSpot.price) }, { ticker: '@GOLDCUR', price: Math.max(0, SET_GOLDCUR.indexOf(goldSpot.cur)) });
+    try { ({ error } = await db.from('prices').upsert(rows.map(r => ({ user_id: user.id, ...r, updated_at: now })), { onConflict: 'user_id,ticker' })); }
     catch (e) { error = { message: e?.message || 'network error' }; }
     if (!error) { settingsErr = null; return; }
     settingsErr = error.message || 'unknown error';
     console.warn('[settings] save failed:', error);
     if (loud && !settingsWarned) {
       settingsWarned = true;
-      setTimeout(() => toast('Saved on this device, but not synced to your phone. Reason: ' + settingsErr, 'error'), 1800);
+      setTimeout(() => toast('Saved on this device, but not synced to your other devices. Reason: ' + settingsErr, 'error'), 1800);
     }
   }, 250);
 }
@@ -1382,7 +1375,6 @@ function beginView(name) {
 /* ══════════════════════════ data ══════════════════════════ */
 async function refreshAll(first = false) {
   if (!user) return;
-  const settingsDone = pullSettings();
   const [e, t, g, th, p, ac, sn] = await Promise.all([
     db.from('entries').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
     db.from('trades').select('*').order('trade_date', { ascending: false }).order('created_at', { ascending: false }),
@@ -1398,12 +1390,13 @@ async function refreshAll(first = false) {
   cache.trades    = t.data || [];
   cache.gold      = g.data || [];
   cache.thesis    = th.data || [];
-  cache.prices    = Object.fromEntries((p.data || []).map(r => [r.ticker, Number(r.price)]));
-  const stamps    = (p.data || []).map(r => r.updated_at).filter(Boolean).sort();
+  applySettings(p.data, p.error);
+  const shareRows = (p.data || []).filter(r => !isSettingRow(r.ticker));
+  cache.prices    = Object.fromEntries(shareRows.map(r => [r.ticker, Number(r.price)]));
+  const stamps    = shareRows.map(r => r.updated_at).filter(Boolean).sort();
   cache.priceStamp = stamps.length ? stamps[stamps.length - 1] : null;
   cache.accounts  = ac.data || [];
   cache.snapshots = sn.data || [];
-  await settingsDone;
   renderAll();
   if (first) playIntro(ui.view);
 }
