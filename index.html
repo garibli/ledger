@@ -286,6 +286,16 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .amt.in { color: var(--green); }
 .pos { color: var(--green); } .neg { color: var(--red); }
 .amt-sub { font-size: 12.5px; color: var(--muted); font-weight: 600; text-align: right; white-space: nowrap; }
+.amt-sub.shop { color: var(--gold); }
+.trm { padding: 0; overflow: hidden; }
+.trm-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(84px, auto) minmax(84px, auto); gap: 12px; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--line); }
+.trm-row:last-child { border-bottom: 0; }
+.trm-head { background: var(--surface-2); font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-top: 9px; padding-bottom: 9px; }
+.trm-head > :not(:first-child), .trm-num { text-align: right; }
+.trm-num { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.trm-num small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+.trm-row.mine { background: var(--gold-soft); }
+@media (max-width: 420px) { .trm-row { gap: 8px; padding: 10px 12px; grid-template-columns: minmax(0, 1fr) auto auto; } }
 .icon-btn {
   width: 32px; height: 32px; border-radius: 50%; border: 0; background: transparent; color: var(--muted);
   display: grid; place-items: center; font-size: 15px; transition: background-color .15s, color .15s;
@@ -675,6 +685,8 @@ let user = null, booted = false;
 let cache = emptyCache();
 let rates = load('ledger.rates', { gbpAzn: null, usdAzn: null, base: 'AZN' });
 let goldSpot = load('ledger.goldSpot', { price: null, cur: 'AZN' });
+/* Turkish market from Bigpara: { items: { gram: {buy, sell}, ... }, usdTry, at } */
+let trGold = load('ledger.trGold', null);
 let range = load('ledger.range', { kind: 'month', from: null, to: null });
 const ui = {
   view: initialView(), day: todayStr(), month: todayStr().slice(0, 7),
@@ -786,6 +798,7 @@ function toAzn(a, cur, r = rates) {
   if (cur === 'AZN') return a;
   if (cur === 'GBP') return r.gbpAzn ? a * r.gbpAzn : NaN;
   if (cur === 'USD') return r.usdAzn ? a * r.usdAzn : NaN;
+  if (cur === 'TRY') return r.usdAzn && tryPerUsd() ? a / tryPerUsd() * r.usdAzn : NaN;
   return NaN;
 }
 function fromAzn(a, cur, r = rates) {
@@ -793,13 +806,15 @@ function fromAzn(a, cur, r = rates) {
   if (cur === 'AZN') return a;
   if (cur === 'GBP') return r.gbpAzn ? a / r.gbpAzn : NaN;
   if (cur === 'USD') return r.usdAzn ? a / r.usdAzn : NaN;
+  if (cur === 'TRY') return r.usdAzn && tryPerUsd() ? a / r.usdAzn * tryPerUsd() : NaN;
   return NaN;
 }
+function tryPerUsd() { return num(trGold?.usdTry) > 0 ? num(trGold.usdTry) : null; }
 function conv(a, from, to, r = rates) { return fromAzn(toAzn(a, from, r), to, r); }
 
 /* show an amount in the chosen currency when it can be converted, otherwise as it is */
 function shown(a, from) {
-  if (ratesReady() && ['GBP', 'AZN', 'USD'].includes(from)) {
+  if (ratesReady() && (['GBP', 'AZN', 'USD'].includes(from) || (from === 'TRY' && tryPerUsd()))) {
     const v = conv(a, from, base());
     if (Number.isFinite(v)) return { v, cur: base() };
   }
@@ -814,6 +829,13 @@ function fmtRate(r) { return String(Number(Number(r).toFixed(4))); }
    Kept as a few special rows in the prices table (names start with @),
    so it needs no extra table in Supabase. */
 const SET_BASES = ['AZN', 'GBP', 'USD'], SET_GOLDCUR = ['AZN', 'GBP', 'USD', 'TRY'];
+/* Turkish market items, in the order shown on the Gold page */
+const TR_KEYS = ['gram', 'has', 'k22', 'bilezik22', 'k18', 'k14', 'ceyrek', 'yarim', 'tam'];
+const TR_NAMES = {
+  gram: ['Gram altın', '24 ayar, per gram'], has: ['Has altın', '24 ayar 995, per gram'],
+  k22: ['22 ayar', 'per gram'], bilezik22: ['22 ayar bilezik', 'per gram'], k18: ['18 ayar', 'per gram'], k14: ['14 ayar', 'per gram'],
+  ceyrek: ['Çeyrek altın', 'one coin, 1.75 g'], yarim: ['Yarım altın', 'one coin, 3.5 g'], tam: ['Tam altın', 'one coin, 7 g'],
+};
 const isSettingRow = t => String(t).startsWith('@');
 let settingsErr = null, settingsWarned = false, pushTimer = null, pushByUser = false;
 /* called with the rows of the prices table every time data loads */
@@ -830,6 +852,12 @@ function applySettings(rows, readError) {
   else rates = { ...rates, base: b };
   if (m['@GOLD'] > 0) goldSpot = { price: m['@GOLD'], cur: SET_GOLDCUR[m['@GOLDCUR']] || 'AZN' };
   save('ledger.rates', rates); save('ledger.goldSpot', goldSpot);
+  const trAt = m['@TRAT'] > 0 ? new Date(m['@TRAT'] * 1000).toISOString() : null;
+  if (trAt && (!trGold?.at || trAt > trGold.at)) {
+    const items = {};
+    TR_KEYS.forEach(k => { if (m['@TR_' + k + '_B'] > 0 && m['@TR_' + k + '_S'] > 0) items[k] = { buy: m['@TR_' + k + '_B'], sell: m['@TR_' + k + '_S'] }; });
+    if (items.gram) { trGold = { items, usdTry: m['@TRY'] > 0 ? m['@TRY'] : null, at: trAt }; save('ledger.trGold', trGold); }
+  }
 }
 /* byUser = you just changed something. Only then do we bother you if it did not sync. */
 function pushSettings(byUser = true) {
@@ -842,6 +870,11 @@ function pushSettings(byUser = true) {
     const now = new Date().toISOString(), rows = [{ ticker: '@BASE', price: Math.max(0, SET_BASES.indexOf(base())) }];
     if (Number(rates.gbpAzn) > 0 && Number(rates.usdAzn) > 0) rows.push({ ticker: '@GBPAZN', price: Number(rates.gbpAzn) }, { ticker: '@USDAZN', price: Number(rates.usdAzn) });
     if (Number(goldSpot.price) > 0) rows.push({ ticker: '@GOLD', price: Number(goldSpot.price) }, { ticker: '@GOLDCUR', price: Math.max(0, SET_GOLDCUR.indexOf(goldSpot.cur)) });
+    if (trGold?.items?.gram && trGold.at) {
+      rows.push({ ticker: '@TRAT', price: Math.round(new Date(trGold.at).getTime() / 1000) });
+      if (tryPerUsd()) rows.push({ ticker: '@TRY', price: tryPerUsd() });
+      Object.entries(trGold.items).forEach(([k, q]) => { if (TR_KEYS.includes(k)) rows.push({ ticker: '@TR_' + k + '_B', price: q.buy }, { ticker: '@TR_' + k + '_S', price: q.sell }); });
+    }
     try { ({ error } = await db.from('prices').upsert(rows.map(r => ({ user_id: user.id, ...r, updated_at: now })), { onConflict: 'user_id,ticker' })); }
     catch (e) { error = { message: e?.message || 'network error' }; }
     if (!error) { settingsErr = null; return; }
@@ -1444,6 +1477,21 @@ function buildHoldings() {
 function portfolioUsd() { return buildHoldings().open.filter(x => x.value !== null).reduce((a, x) => a + x.value, 0); }
 const fineness = k => KARAT_FINENESS[Number(k)] ?? (Number(k) / 24);
 const pureGrams = g => num(g.grams) * fineness(g.karat);
+/* what a Turkish jeweller would pay today, using the buy price for that karat */
+function shopPriceTry(i) {
+  const it = trGold?.items; if (!it) return null;
+  const k = Number(i.karat), g = num(i.grams);
+  const per = k >= 24 ? (it.has || it.gram) : k === 22 ? it.k22 : k === 18 ? it.k18 : k === 14 ? it.k14 : null;
+  if (per) return g * per.buy;
+  const pure = it.has || it.gram;
+  return pure ? pureGrams(i) * pure.buy : null;
+}
+function shopValueTry() {
+  if (!trGold?.items || !cache.gold.length) return null;
+  let t = 0;
+  for (const i of cache.gold) { const v = shopPriceTry(i); if (v === null) return null; t += v; }
+  return t;
+}
 function goldValueTotal() { if (!goldSpot.price) return null; return cache.gold.reduce((a, i) => a + pureGrams(i), 0) * num(goldSpot.price); }
 function cashIn(b) { return cache.accounts.reduce((a, x) => { const v = conv(x.balance, x.currency, b); return a + (Number.isFinite(v) ? v : 0); }, 0); }
 function netWorthParts(b) {
@@ -1702,6 +1750,7 @@ function renderGold() {
   const gross = items.reduce((a, i) => a + num(i.grams), 0);
   const pure = items.reduce((a, i) => a + pureGrams(i), 0);
   const val = goldValueTotal();
+  const shopTotal = shopValueTry();
   const paidBy = {};
   items.forEach(i => { if (num(i.paid) > 0) paidBy[i.currency] = (paidBy[i.currency] || 0) + num(i.paid); });
   const paidEntries = Object.entries(paidBy);
@@ -1715,7 +1764,10 @@ function renderGold() {
     h('div', { class: 'hero-nums' }, val !== null && items.length ? countShown(val, goldSpot.cur) : h('span', { class: 'hero-num zero' }, items.length ? 'Add a price' : fmtShown(0, 'AZN'))),
     h('div', { class: 'hero-sub' },
       h('span', { class: 'chip gold' }, grams(pure) + ' pure gold'),
-      h('span', null, 'in ' + grams(gross) + ' on the scale'))));
+      h('span', null, 'in ' + grams(gross) + ' on the scale')),
+    shopTotal !== null ? h('div', { class: 'hero-sub' },
+      h('span', { class: 'chip neutral' }, '🇹🇷 A kuyumcu would pay about ' + fmtShown(shopTotal, 'TRY')),
+      fmtShown(shopTotal, 'TRY').startsWith('₺') ? null : h('span', null, money(shopTotal, 'TRY'))) : null));
 
   root.appendChild(h('div', { class: 'stats three' },
     stat('On the scale', grams(gross), items.length + (items.length === 1 ? ' piece' : ' pieces')),
@@ -1733,11 +1785,13 @@ function renderGold() {
     goldSpot = { price: p, cur: spotCur }; save('ledger.goldSpot', goldSpot); pushSettings();
     toast('Gold price saved'); renderGold(); renderNetWorth(); renderAnalysis();
   } }, 'Save price');
-  root.appendChild(section('Today’s gold price', 'The price of one gram of pure 24 karat gold. Every piece is valued from this, adjusted for its purity.',
+  root.appendChild(section('Today’s gold price', 'The world price of one gram of pure 24 karat gold. Every piece is valued from this, adjusted for its purity. Fetch live also loads the Turkish market below.',
     h('div', { class: 'panel' },
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Currency'), h('div', { style: { overflowX: 'auto' } }, curSeg)),
       h('div', { class: 'price-line' }, field('Price per gram', priceIn), fetchBtn, saveBtn),
       ui.goldStamp ? h('div', { class: 'hint box', style: { marginTop: '14px' } }, ui.goldStamp) : null)));
+
+  root.appendChild(turkishMarket());
 
   root.appendChild(section('My gold', null, items.length ? h('div', { class: 'list' }, items.map(i => {
     const v = goldSpot.price ? pureGrams(i) * num(goldSpot.price) : null;
@@ -1746,9 +1800,41 @@ function renderGold() {
       h('div', { class: 'row-main' },
         h('div', { class: 'row-title' }, i.item_name, h('span', { class: 'badge gold' }, num(i.karat) + 'K'), i.is_gift ? h('span', { class: 'badge' }, 'gift') : null),
         h('div', { class: 'row-sub wrap' }, grams(pureGrams(i)) + ' pure in ' + grams(i.grams) + ', ' + fmtDate(i.buy_date) + (num(i.paid) ? ', paid ' + money(i.paid, i.currency) : ''))),
-      h('div', null, h('div', { class: 'amt' }, v === null ? '—' : fmtShown(v, goldSpot.cur)), h('div', { class: 'amt-sub' }, 'today')),
+      h('div', null, h('div', { class: 'amt' }, v === null ? '—' : fmtShown(v, goldSpot.cur)),
+        h('div', { class: 'amt-sub' }, 'market today'),
+        shopPriceTry(i) !== null ? h('div', { class: 'amt-sub shop' }, 'shop pays ' + fmtShown(shopPriceTry(i), 'TRY')) : null),
       delBtn(() => removeRow('gold_items', i.id, 'this gold item'), 'Delete ' + i.item_name));
   })) : h('div', { class: 'list' }, empty('💍', 'No gold recorded yet.', { label: 'Add gold', onclick: () => openGoldSheet() }))));
+}
+function turkishMarket() {
+  const note = 'From Bigpara (Kapalıçarşı free market). Shop pays is what a kuyumcu gives you when you sell. Shop sells is what you pay when you buy.';
+  if (!trGold?.items?.gram) {
+    return section('🇹🇷 Turkish market', note, h('div', { class: 'panel' },
+      h('div', { class: 'hint' }, 'No Turkish prices yet. Tap ↻ Fetch live above to load them.')));
+  }
+  const at = new Date(trGold.at);
+  const hours = (Date.now() - at.getTime()) / 36e5;
+  const when = at.toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const convertible = ratesReady() && tryPerUsd();
+  const cell = v => h('div', { class: 'trm-num' }, money(v, 'TRY', v >= 1000 ? 0 : 2), convertible ? h('small', null, fmtShown(v, 'TRY')) : null);
+  const ownKarats = new Set(cache.gold.map(i => Number(i.karat)));
+  const mine = k => (k === 'has' && ownKarats.has(24)) || (k === 'k22' && ownKarats.has(22)) || (k === 'k18' && ownKarats.has(18)) || (k === 'k14' && ownKarats.has(14));
+  const rows = TR_KEYS.filter(k => trGold.items[k]).map(k => {
+    const q = trGold.items[k], gap = (q.sell / q.buy - 1) * 100;
+    return h('div', { class: 'trm-row' + (mine(k) ? ' mine' : '') },
+      h('div', { class: 'row-main' },
+        h('div', { class: 'row-title' }, TR_NAMES[k][0], mine(k) ? h('span', { class: 'badge gold' }, 'you own') : null),
+        h('div', { class: 'row-sub' }, TR_NAMES[k][1] + (gap >= 0.5 ? ' · gap ' + gap.toFixed(gap >= 10 ? 0 : 1) + '%' : ''))),
+      cell(q.buy), cell(q.sell));
+  });
+  return section('🇹🇷 Turkish market', note,
+    h('div', { class: 'list trm' },
+      h('div', { class: 'trm-row trm-head' }, h('div', null, 'Item'), h('div', null, 'Shop pays'), h('div', null, 'Shop sells')),
+      rows),
+    h('div', { class: 'hint box', style: { marginTop: '12px' } },
+      'Fetched ' + when + (tryPerUsd() ? '. $1 = ₺' + tryPerUsd().toFixed(2) : '') + '. ' +
+      (hours > 24 ? 'These prices are over a day old, tap ↻ Fetch live for fresh ones. ' : '') +
+      'Jewellery has a big gap because the shop does not pay for the craftsmanship.'));
 }
 function goldEmoji(name) {
   const n = String(name || '').toLowerCase();
@@ -2363,17 +2449,43 @@ async function fetchGoldPrice(want, btn) {
   if (!user) return;
   btn.disabled = true; btn.textContent = 'Fetching…';
   try {
-    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: ['GC=F', 'AZN=X'] } });
+    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: ['GC=F', 'AZN=X', 'TRY=X'], tr_gold: true } });
     if (error) throw error;
-    const oz = data?.prices?.['GC=F'], aznPerUsd = data?.prices?.['AZN=X'];
-    if (!oz) throw new Error('no gold price came back');
-    const usdG = oz / GRAMS_PER_TROY_OZ;
+    const oz = data?.prices?.['GC=F'], aznPerUsd = data?.prices?.['AZN=X'], usdTry = data?.prices?.['TRY=X'];
+    const now = new Date().toISOString();
+
+    // Turkish market
+    let trNote = '';
+    if (data?.tr_gold?.items?.gram) {
+      trGold = { items: data.tr_gold.items, usdTry: usdTry || tryPerUsd(), at: now };
+      save('ledger.trGold', trGold);
+    } else if (data && !('tr_gold' in data)) {
+      trNote = ' Turkish prices need the new quotes function (v3) in Supabase.';
+    } else {
+      trNote = ' Turkish prices could not be loaded' + (data?.tr_gold_error ? ' (' + data.tr_gold_error + ')' : '') + '.';
+    }
+
+    // world price per gram in dollars; if Yahoo fails, work it out from the Turkish gram price
+    let usdG = oz ? oz / GRAMS_PER_TROY_OZ : null;
+    if (!usdG && trGold?.items?.gram && tryPerUsd()) usdG = (trGold.items.gram.buy + trGold.items.gram.sell) / 2 / tryPerUsd();
+    if (!usdG) throw new Error('no gold price came back');
+
     let value, cur, how;
-    if (want === 'AZN' && aznPerUsd) { value = usdG * aznPerUsd; cur = 'AZN'; how = money(usdG, 'USD') + ' a gram at ' + num(aznPerUsd).toFixed(4) + ' manat to the dollar'; }
-    else { value = usdG; cur = 'USD'; how = money(usdG, 'USD') + ' a gram' + (want !== 'USD' ? '. Only dollars and manat can be fetched, so this is in dollars' : ''); }
+    if (want === 'TRY' && trGold?.items?.gram && trGold.at === now) {
+      value = (trGold.items.gram.buy + trGold.items.gram.sell) / 2; cur = 'TRY'; how = 'the Turkish gram price (Bigpara)';
+    } else if (want === 'TRY' && tryPerUsd()) {
+      value = usdG * tryPerUsd(); cur = 'TRY'; how = money(usdG, 'USD') + ' a gram at ₺' + tryPerUsd().toFixed(2) + ' to the dollar';
+    } else if (want === 'AZN' && aznPerUsd) {
+      value = usdG * aznPerUsd; cur = 'AZN'; how = money(usdG, 'USD') + ' a gram at ' + num(aznPerUsd).toFixed(4) + ' manat to the dollar';
+    } else if (want === 'GBP' && ratesReady()) {
+      value = usdG * rates.usdAzn / rates.gbpAzn; cur = 'GBP'; how = money(usdG, 'USD') + ' a gram at your saved rates';
+    } else {
+      value = usdG; cur = 'USD'; how = money(usdG, 'USD') + ' a gram';
+    }
     goldSpot = { price: Number(value.toFixed(2)), cur }; save('ledger.goldSpot', goldSpot); pushSettings();
-    ui.goldStamp = 'Gold is ' + money(oz, 'USD') + ' an ounce, so ' + how + '. Fetched ' + new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '. This is the market price; a shop pays a little less.';
-    toast('Gold price updated');
+    ui.goldStamp = (oz ? 'Gold is ' + money(oz, 'USD') + ' an ounce. ' : '') + 'Price set from ' + how + '. Fetched ' +
+      new Date(now).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.' + trNote;
+    toast(trNote ? 'World gold price updated.' + trNote : 'Gold prices updated, world and Turkish', trNote ? 'error' : 'ok');
     renderGold(); renderNetWorth(); renderAnalysis();
   } catch (err) {
     toast('Could not fetch gold (' + (err.message || err) + '). Type it in instead.', 'error');
