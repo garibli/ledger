@@ -831,7 +831,7 @@ function fmtRate(r) { return String(Number(Number(r).toFixed(4))); }
 const SET_BASES = ['AZN', 'GBP', 'USD'], SET_GOLDCUR = ['AZN', 'GBP', 'USD', 'TRY'];
 /* Turkish market items, in the order shown on the Gold page */
 const TR_GOLD_KEYS = ['gram', 'has', 'k22', 'bilezik22', 'k18', 'k14', 'ceyrek', 'yarim', 'tam'];
-const TR_KEYS = [...TR_GOLD_KEYS, 'usd', 'eur', 'gbp'];
+const TR_KEYS = TR_GOLD_KEYS;
 const TR_NAMES = {
   gram: ['Gram altın', '24 ayar, per gram'], has: ['Has altın', '24 ayar 995, per gram'],
   k22: ['22 ayar', 'per gram'], bilezik22: ['22 ayar bilezik', 'per gram'], k18: ['18 ayar', 'per gram'], k14: ['14 ayar', 'per gram'],
@@ -1842,9 +1842,7 @@ function turkishMarket(fetchBtn) {
         h('div', { class: 'row-sub' }, TR_NAMES[k][1] + (gap >= 0.5 ? ' · gap ' + gap.toFixed(gap >= 10 ? 0 : 1) + '%' : ''))),
       cell(q.buy), cell(q.sell));
   });
-  const usd = trGold.items.usd;
-  const fxTxt = usd ? '$1 = ₺' + tryPerUsd().toFixed(2) + ' (Bigpara dollar: shop buys ₺' + usd.buy.toFixed(2) + ', sells ₺' + usd.sell.toFixed(2) + ')'
-    : tryPerUsd() ? '$1 = ₺' + tryPerUsd().toFixed(2) + ' (world rate, Bigpara dollar was not available)' : '';
+  const fxTxt = tryPerUsd() ? '$1 = ₺' + tryPerUsd().toFixed(2) + ', live market rate' : '';
   return sectionWith('🏪 Turkish market', note, fetchBtn,
     h('div', { class: 'list trm' },
       h('div', { class: 'trm-row trm-head' }, h('div', null, 'Item'), h('div', null, 'Shop pays'), h('div', null, 'Shop sells')),
@@ -2402,6 +2400,7 @@ function openRatesSheet() {
   const g = input({ type: 'text', inputmode: 'decimal', value: rates.gbpAzn ? String(rates.gbpAzn) : '', placeholder: '2.25' });
   const u = input({ type: 'text', inputmode: 'decimal', value: rates.usdAzn ? String(rates.usdAzn) : '', placeholder: '1.70' });
   const btn = h('button', { class: 'btn btn-primary block' }, 'Save rates');
+  const liveBtn = h('button', { class: 'btn btn-ghost block', style: { marginBottom: '12px' }, onclick: () => fetchLiveRates(liveBtn) }, '↻ Live rates');
   btn.addEventListener('click', () => {
     const gv = parseAmount(g.value), uv = parseAmount(u.value);
     if (!(gv > 0)) return shake(g);
@@ -2412,7 +2411,10 @@ function openRatesSheet() {
   openSheet('Exchange rates', h('div', null,
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Show totals in'), seg([['AZN', '₼ Manat'], ['GBP', '£ Pounds'], ['USD', '$ Dollars']], b, v => { b = v; }, { full: true })),
     h('div', { class: 'field-row' }, field('£1 in manat', g), field('$1 in manat', u)),
-    h('div', { class: 'hint box' }, 'These two rates cover all three currencies. Every page uses them, on your phone and your laptop alike.'),
+    liveBtn,
+    h('div', { class: 'hint box' }, (rates.at
+      ? 'Live market rates from ' + new Date(rates.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + (tryPerUsd() ? ', and $1 = ₺' + fmtRate(tryPerUsd()) : '') + '. '
+      : '') + 'They update by themselves every time you tap ↻ Refresh prices or ↻ Fetch live. You can still type your own and save. Every page uses them, on your phone and your laptop alike.'),
     syncNote()),
     { onOpen: () => g.focus(), footer: btn });
 }
@@ -2446,9 +2448,10 @@ async function refreshPrices(ev) {
   if (!tickers.length) return toast('No open positions to price', 'error');
   if (btn) { btn.disabled = true; btn.textContent = 'Fetching…'; }
   try {
-    const { data, error } = await db.functions.invoke('quotes', { body: { tickers } });
+    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: [...tickers, ...FX_TICKERS] } });
     if (error) throw error;
-    const got = data && data.prices ? data.prices : {};
+    applyLiveRates(data?.prices);
+    const got = Object.fromEntries(Object.entries(data?.prices || {}).filter(([t]) => tickers.includes(t)));
     const names = Object.keys(got);
     if (!names.length) throw new Error('nothing came back');
     const now = new Date().toISOString();
@@ -2456,29 +2459,57 @@ async function refreshPrices(ev) {
     if (e2) throw e2;
     names.forEach(t => { cache.prices[t] = Number(got[t]); });
     cache.priceStamp = now;
-    const failed = data.failed || [];
+    const failed = (data.failed || []).filter(t => tickers.includes(t));
     toast('Updated ' + names.length + (names.length === 1 ? ' price' : ' prices') + (failed.length ? '. ' + failed.join(', ') + ' failed' : ''));
-    renderInvest(); renderNetWorth(); renderAnalysis();
+    renderAll();
   } catch (err) {
     toast('Could not fetch prices (' + (err.message || err) + '). Type them in by hand.', 'error');
     if (btn) { btn.disabled = false; btn.textContent = '↻ Refresh prices'; }
+  }
+}
+/* live exchange rates from the market (the same numbers Google shows):
+   $ to ₼, £ to ₼ (worked out as £ to $ times $ to ₼), and $ to ₺ */
+const FX_TICKERS = ['AZN=X', 'GBPUSD=X', 'TRY=X'];
+function applyLiveRates(prices) {
+  const usdAzn = num(prices?.['AZN=X']), gbpUsd = num(prices?.['GBPUSD=X']), usdTry = num(prices?.['TRY=X']);
+  let done = false;
+  if (usdAzn > 0 && gbpUsd > 0) {
+    rates = { gbpAzn: Number((gbpUsd * usdAzn).toFixed(4)), usdAzn: Number(usdAzn.toFixed(4)), base: base(), at: new Date().toISOString() };
+    save('ledger.rates', rates); done = true;
+  }
+  if (usdTry > 0) { trGold = { ...(trGold || { items: {} }), usdTry: Number(usdTry.toFixed(4)) }; save('ledger.trGold', trGold); done = true; }
+  if (done) pushSettings(false);
+  return done;
+}
+async function fetchLiveRates(btn) {
+  if (!user) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Fetching…'; }
+  try {
+    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: FX_TICKERS } });
+    if (error) throw error;
+    if (!applyLiveRates(data?.prices)) throw new Error('no rates came back');
+    closeSheet();
+    toast('Live rates: £1 = ₼' + fmtRate(rates.gbpAzn) + ', $1 = ₼' + fmtRate(rates.usdAzn) + (tryPerUsd() ? ', $1 = ₺' + fmtRate(tryPerUsd()) : ''));
+    renderAll();
+  } catch (err) {
+    toast('Could not fetch rates (' + (err.message || err) + '). Type them in instead.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Live rates'; }
   }
 }
 async function fetchGoldPrice(want, btn) {
   if (!user) return;
   btn.disabled = true; btn.textContent = 'Fetching…';
   try {
-    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: ['GC=F', 'AZN=X', 'TRY=X'], tr_gold: true } });
+    const { data, error } = await db.functions.invoke('quotes', { body: { tickers: ['GC=F', ...FX_TICKERS], tr_gold: true } });
     if (error) throw error;
     const oz = data?.prices?.['GC=F'], aznPerUsd = data?.prices?.['AZN=X'], usdTry = data?.prices?.['TRY=X'];
     const now = new Date().toISOString();
 
     // Turkish market
     let trNote = '';
+    applyLiveRates(data?.prices);
     if (data?.tr_gold?.items?.gram) {
-      const fx = data?.tr_fx?.items || {};
-      const bpUsd = fx.usd ? (fx.usd.buy + fx.usd.sell) / 2 : null;   // middle of Bigpara's buy and sell
-      trGold = { items: { ...data.tr_gold.items, ...fx }, usdTry: bpUsd || usdTry || tryPerUsd(), at: now };
+      trGold = { items: data.tr_gold.items, usdTry: usdTry || tryPerUsd(), at: now };
       save('ledger.trGold', trGold);
     } else if (data && !('tr_gold' in data)) {
       trNote = ' Turkish prices need the new quotes function (v3) in Supabase.';
@@ -2506,8 +2537,7 @@ async function fetchGoldPrice(want, btn) {
     goldSpot = { price: Number(value.toFixed(2)), cur }; save('ledger.goldSpot', goldSpot); pushSettings();
     ui.goldStamp = (oz ? 'Gold is ' + money(oz, 'USD') + ' an ounce. ' : '') + 'Price set from ' + how + '. Fetched ' +
       new Date(now).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.' + trNote;
-    if (!trNote && !data?.tr_fx?.items?.usd) trNote = ' The Bigpara dollar rate was missing, so the world rate is used' + (data?.tr_fx_error ? ' (' + data.tr_fx_error + ')' : '') + '.';
-    toast(trNote ? 'Gold prices updated.' + trNote : 'Gold and dollar prices updated from Bigpara', trNote ? 'error' : 'ok');
+    toast(trNote ? 'Gold prices updated.' + trNote : 'Gold prices and live rates updated', trNote ? 'error' : 'ok');
     renderGold(); renderNetWorth(); renderAnalysis();
   } catch (err) {
     toast('Could not fetch gold (' + (err.message || err) + '). Type it in instead.', 'error');
