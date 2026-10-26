@@ -8,6 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Ledger</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Ledger">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Manrope:wght@400..800&display=swap" rel="stylesheet">
@@ -282,6 +287,10 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .row-sub.wrap { white-space: normal; line-height: 1.4; }
 .chart-key { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--ink-2); margin-bottom: 8px; }
 .chart-key i { width: 18px; height: 2px; background: var(--ink-2); border-radius: 2px; }
+.chart-key.legend2 { gap: 14px; flex-wrap: wrap; }
+.chart-key .sw { display: inline-flex; align-items: center; gap: 6px; }
+.chart-key .sw b { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.mode-switch { max-width: 360px; }
 .amt { font-weight: 800; font-size: 15.5px; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
 .amt.in { color: var(--green); }
 .pos { color: var(--green); } .neg { color: var(--red); }
@@ -688,6 +697,7 @@ let goldSpot = load('ledger.goldSpot', { price: null, cur: 'AZN' });
 /* Turkish market from Bigpara: { items: { gram: {buy, sell}, ... }, usdTry, at } */
 let trGold = load('ledger.trGold', null);
 let range = load('ledger.range', { kind: 'month', from: null, to: null });
+let anMode = load('ledger.anMode', 'spend');   // Analysis shows spending or income
 const ui = {
   view: initialView(), day: todayStr(), month: todayStr().slice(0, 7),
   showAllTrades: false, goldStamp: '', flashKey: null,
@@ -1110,6 +1120,44 @@ function columnChart({ items, cur, height = 210, avg = null, avgLabel = 'average
   }, height, label);
 }
 
+/* two bars per slot, e.g. income and spending: items [{label, title, a, b}] */
+function pairedChart({ items, cur, height = 220, aName, bName, aColor, bColor, label }) {
+  return chart((W, H, box) => {
+    const padL = 46, padR = 8, padT = 12, padB = 26;
+    const iw = Math.max(10, W - padL - padR), ih = H - padT - padB;
+    const max = Math.max(0, ...items.flatMap(d => [d.a, d.b]));
+    const step = niceStep(max || 1, 3);
+    const yMax = Math.max(step, Math.ceil((max || 1) / step) * step);
+    const y = v => padT + ih - (v / yMax) * ih;
+    const band = iw / Math.max(1, items.length);
+    const bw = Math.max(3, Math.min(18, band * 0.32));
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+    for (let t = 0; t <= yMax + 1e-9; t += step) {
+      svg.appendChild(s('line', { x1: padL, x2: W - padR, y1: y(t), y2: y(t), style: { stroke: t === 0 ? 'var(--axis)' : 'var(--grid)', strokeWidth: 1 } }));
+      svg.appendChild(s('text', { x: padL - 8, y: y(t) + 4, 'text-anchor': 'end' }, compact(t, cur)));
+    }
+    items.forEach((d, i) => {
+      const cx = padL + band * i + band / 2;
+      const bars = [];
+      [[d.a, aColor, -1], [d.b, bColor, 1]].forEach(([v, color, side], j) => {
+        if (!(v > 0)) return;
+        const top = y(v), x = side < 0 ? cx - bw - 1 : cx + 1;
+        const el = s('path', { d: barPath(x, top, bw, Math.max(1, y(0) - top)), class: 'bar grow-y', style: { fill: color, animationDelay: Math.min(i * 40 + j * 20, 500) + 'ms' } });
+        svg.appendChild(el); bars.push(el);
+      });
+      svg.appendChild(s('text', { x: cx, y: H - 7, 'text-anchor': 'middle' }, d.label));
+      const hit = s('rect', { x: padL + band * i, y: padT, width: band, height: ih, class: 'hit' });
+      const left = d.a - d.b;
+      bindTip(hit, () => ({ title: d.title || d.label, rows: [
+        { value: money(d.a, cur), label: aName, color: aColor },
+        { value: money(d.b, cur), label: bName, color: bColor },
+        { value: signed(left, cur), label: left >= 0 ? 'left over' : 'more out than in' }] }), bars[0] || null, box);
+      svg.appendChild(hit);
+    });
+    return svg;
+  }, height, label);
+}
+
 /* line: points [{date, value, title}] */
 function lineChart({ points, cur, height = 200, label }) {
   return chart((W, H, box) => {
@@ -1171,8 +1219,8 @@ function lineChart({ points, cur, height = 200, label }) {
 }
 
 /* category bars (HTML) */
-function catBars(rows, cur, { prev = null, max = 8, gold = false } = {}) {
-  if (!rows.length) return h('div', { class: 'empty' }, 'Nothing spent in this period.');
+function catBars(rows, cur, { prev = null, max = 8, gold = false, upIsGood = false, emptyText = 'Nothing spent in this period.', fillColor = null } = {}) {
+  if (!rows.length) return h('div', { class: 'empty' }, emptyText);
   const total = rows.reduce((a, r) => a + r.value, 0) || 1;
   const top = rows[0].value || 1;
   let list = rows;
@@ -1188,10 +1236,10 @@ function catBars(rows, cur, { prev = null, max = 8, gold = false } = {}) {
       else {
         const d = (r.value - p) / p * 100;
         if (Math.abs(d) < 1) chip = h('span', { class: 'chip neutral' }, 'same');
-        else chip = h('span', { class: 'chip ' + (d > 0 ? 'bad' : 'good') }, (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(0) + '%');
+        else chip = h('span', { class: 'chip ' + ((d > 0) !== upIsGood ? 'bad' : 'good') }, (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(0) + '%');
       }
     }
-    const fill = h('div', { class: 'cbar-fill grow-x' + (gold ? ' gold' : ''), style: { width: (r.value / top * 100).toFixed(1) + '%', animationDelay: (i * 60) + 'ms' } });
+    const fill = h('div', { class: 'cbar-fill grow-x' + (gold ? ' gold' : ''), style: { width: (r.value / top * 100).toFixed(1) + '%', animationDelay: (i * 60) + 'ms', ...(fillColor ? { background: fillColor } : {}) } });
     return h('div', { class: 'cbar' },
       h('div', { class: 'cbar-top' },
         h('span', { class: 'cbar-emo emo', 'aria-hidden': 'true' }, r.emoji),
@@ -2019,7 +2067,8 @@ function renderAnalysis() {
       if (k === 'custom' && !range.from) { const c = currentRange(); range.from = c.from; range.to = c.to; }
       save('ledger.range', range); renderAnalysis();
     } }, l)));
-  const filters = h('div', { class: 'filters' }, chips);
+  const modeSeg = h('div', { class: 'mode-switch' }, seg([['spend', '💸 Spending'], ['income', '💰 Income']], anMode, v => { anMode = v; save('ledger.anMode', v); renderAnalysis(); }, { full: true }));
+  const filters = h('div', { class: 'filters' }, modeSeg, chips);
   if (range.kind === 'custom') {
     const f = h('input', { class: 'input', type: 'date', value: range.from || '' }), tt = h('input', { class: 'input', type: 'date', value: range.to || '' });
     filters.appendChild(h('div', { class: 'price-line' }, field('From', f), field('To', tt),
@@ -2040,6 +2089,13 @@ function renderAnalysis() {
   if (!ready) {
     root.appendChild(ratesCallout());
     root.appendChild(separateSection(rows));
+    return;
+  }
+
+  if (anMode === 'income') {
+    renderIncomeAnalysis(root, { r, end, b, rows });
+    root.appendChild(separateSection(rows));
+    root.appendChild(portfolioChecks(b));
     return;
   }
 
@@ -2125,6 +2181,70 @@ function renderAnalysis() {
 
   root.appendChild(separateSection(rows));
   root.appendChild(portfolioChecks(b));
+}
+function incomeRows(from, to) { return cache.entries.filter(e => e.type === 'income' && e.date >= from && e.date <= to); }
+function incomePhrase(r) { return periodPhrase(r).replace(/^Spent/, 'Income'); }
+function renderIncomeAnalysis(root, { r, end, b, rows }) {
+  const inc = incomeRows(r.from, end), spend = spendRows(r.from, end);
+  const income = sumBase(inc, b), spent = sumBase(spend, b), left = income - spent;
+  const prevR = previousRange(r);
+  const prevIncome = prevR ? sumBase(incomeRows(prevR.from, prevR.to), b) : null;
+  const sources = categoryRows(inc, e => inBase(e, b));
+  const rate = income > 0 ? left / income * 100 : null;
+
+  let delta = null;
+  if (prevIncome !== null) {
+    if (prevIncome <= 0) delta = income > 0 ? h('span', { class: 'chip neutral' }, 'nothing before') : null;
+    else {
+      const d = (income - prevIncome) / prevIncome * 100;
+      delta = Math.abs(d) < 1 ? h('span', { class: 'chip neutral' }, 'about the same')
+        : h('span', { class: 'chip ' + (d > 0 ? 'good' : 'bad') }, (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(0) + '%');
+    }
+  }
+  root.appendChild(h('div', { class: 'hero' },
+    h('div', { class: 'hero-label' }, incomePhrase(r)),
+    h('div', { class: 'hero-nums' }, countEl(income, v => money(v, b))),
+    h('div', { class: 'hero-sub' }, delta, prevR ? h('span', null, 'compared with ' + prevR.label) : null)));
+
+  root.appendChild(h('div', { class: 'stats four' },
+    stat('Spent', money(spent, b), 'in this period'),
+    stat('Left over', h('span', { class: left >= 0 ? 'pos' : 'neg' }, signed(left, b)), left >= 0 ? 'income minus spending' : 'you spent more than came in'),
+    stat('Kept', rate === null ? '—' : Math.round(rate) + '%', rate === null ? 'no income in this period' : rate >= 0 ? 'of your income was not spent' : 'spending went over income'),
+    stat('Biggest source', sources[0] ? sources[0].emoji + ' ' + sources[0].label : '—', sources[0] ? money(sources[0].value, b) + ', ' + Math.round(sources[0].value / (income || 1) * 100) + '% of income' : '')));
+
+  const prevSrc = prevR ? new Map(categoryRows(incomeRows(prevR.from, prevR.to), e => inBase(e, b)).map(c => [c.key, c.value])) : null;
+  root.appendChild(section('Where it came from', prevR ? 'Arrows compare each source with ' + prevR.label + '. Green means more came in.' : null,
+    h('div', { class: 'panel' }, catBars(sources, b, { prev: prevSrc, max: 8, upIsGood: true, emptyText: 'No income logged in this period.', fillColor: 'var(--c3)' }))));
+
+  /* six months of income next to spending */
+  const endYm = end.slice(0, 7), months = [];
+  for (let i = 5; i >= 0; i--) {
+    const ym = addMonths(endYm, -i), mb = monthBounds(ym);
+    months.push({ label: monthShort(ym), title: monthLabel(ym) + (ym === todayStr().slice(0, 7) ? ', so far' : ''),
+      a: sumBase(incomeRows(mb.first, mb.last), b), b: sumBase(spendRows(mb.first, mb.last), b) });
+  }
+  if (months.some(m => m.a > 0 || m.b > 0)) {
+    const totA = months.reduce((x, m) => x + m.a, 0), totB = months.reduce((x, m) => x + m.b, 0);
+    const avgLeft = (totA - totB) / months.length;
+    root.appendChild(section('In and out, month by month',
+      'The six months up to ' + monthLabel(endYm) + '. On average ' + (avgLeft >= 0 ? signed(avgLeft, b) + ' a month was left over.' : 'you spent ' + money(-avgLeft, b) + ' a month more than came in.') +
+      ' Big payments like the scholarship arrive in chunks, so one month can look much better than the next.',
+      h('div', { class: 'panel' },
+        h('div', { class: 'chart-key legend2' },
+          h('span', { class: 'sw' }, h('b', { style: { background: 'var(--c3)' } }), '💰 Income'),
+          h('span', { class: 'sw' }, h('b', { style: { background: 'var(--c2)' } }), '💸 Spending')),
+        pairedChart({ items: months, cur: b, aName: 'Income', bName: 'Spending', aColor: 'var(--c3)', bColor: 'var(--c2)', label: 'Income and spending by month' }))));
+  }
+
+  /* each payment, newest first */
+  const list = inc.slice().sort((x, y) => (y.date + (y.created_at || '')).localeCompare(x.date + (x.created_at || ''))).slice(0, 12);
+  root.appendChild(section('Payments in', inc.length > 12 ? 'The latest 12 of ' + inc.length + '.' : null,
+    list.length ? h('div', { class: 'list' }, list.map(e => h('div', { class: 'row no-del' },
+      h('div', { class: 'bubble in emo', 'aria-hidden': 'true' }, CAT_EMOJI[e.category] || '💰'),
+      h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, e.description || e.category || 'Income'), h('div', { class: 'row-sub' }, fmtDate(e.date) + ' · ' + (e.category || 'Other'))),
+      h('div', null, h('div', { class: 'amt in' }, '+' + money(e.amount, e.currency || 'GBP')),
+        (e.currency || 'GBP') !== b ? h('div', { class: 'amt-sub' }, fmtShown(e.amount, e.currency || 'GBP')) : null))))
+    : h('div', { class: 'list' }, empty('💰', 'No income logged in this period.'))));
 }
 function buckets(from, to, byDate) {
   const n = daysBetween(from, to) + 1;
@@ -2577,6 +2697,12 @@ db.auth.onAuthStateChange((evt, s) => {
   if (s && (!user || user.id !== s.user.id)) enterApp(s.user);
   else if (!s) leaveApp();
 });
+</script>
+<script>
+  /* lets Android install Ledger as an app; harmless everywhere else */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
 </script>
 </body>
 </html>
