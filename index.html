@@ -147,7 +147,7 @@ body.booting #loginScreen { visibility: hidden; }
 
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
-  display: grid; grid-template-columns: repeat(5, 1fr);
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
   background: var(--surface); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
   box-shadow: 0 -8px 28px rgba(20,26,46,.06);
@@ -155,8 +155,9 @@ body.booting #loginScreen { visibility: hidden; }
 .tab {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   height: var(--tabbar-h); background: none; border: 0;
-  font-size: 11.5px; font-weight: 700; color: var(--muted);
+  font-size: 11px; font-weight: 700; color: var(--muted); position: relative; white-space: nowrap; min-width: 0;
 }
+@media (max-width: 360px) { .tab { font-size: 10px; } }
 .tab .emo { font-size: 23px; transition: transform .3s var(--ease), filter .2s; filter: grayscale(.85); opacity: .7; }
 .tab.active { color: var(--accent-ink); }
 .tab.active .emo { transform: translateY(-2px) scale(1.14); filter: none; opacity: 1; }
@@ -425,6 +426,9 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.error { background: var(--red); color: #fff; }
+.toast.has-act { pointer-events: auto; display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 18px; }
+.toast-act { border: 0; background: color-mix(in srgb, var(--page) 18%, transparent); color: inherit; font-weight: 800; font-size: 14px; height: 34px; padding: 0 14px; border-radius: 10px; }
+.toast-act:hover { background: color-mix(in srgb, var(--page) 28%, transparent); }
 @media (min-width: 960px) { .toast { bottom: 28px; left: calc(50% + 120px); } }
 
 /* tooltip */
@@ -523,6 +527,20 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .currency-bar { margin: 0 0 20px; }
 .currency-bar .seg button { min-width: 44px; font-size: 16px; }
 
+/* converter */
+.cv-top { display: flex; align-items: center; gap: 12px; padding: 2px 0 8px; border-bottom: 2px solid var(--line); margin-bottom: 14px; transition: border-color .2s; }
+.cv-top:focus-within { border-color: var(--accent); }
+.cv-top .seg button { min-width: 40px; font-size: 16px; }
+.cv-input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-family: var(--font-display); font-weight: 700; font-size: 34px; letter-spacing: -.03em; height: 52px; color: var(--ink); }
+.cv-input::placeholder { color: var(--line-2); }
+.cv-list { display: flex; flex-direction: column; gap: 8px; }
+.cv-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 13px; background: var(--surface-2); text-align: left; transition: background-color .15s; }
+.cv-row:hover { background: var(--surface-3); }
+.cv-row .cur-sym { flex: none; }
+.cv-name { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; color: var(--ink-2); }
+.cv-rate { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+.cv-val { font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* holdings */
 .hold-head, .hold-row { display: grid; align-items: center; gap: 6px 12px; padding: 13px 14px; }
 .hold-head { display: none; }
@@ -593,6 +611,145 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .foot-note { font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 10px; line-height: 1.55; }
 .more-btn { display: block; width: 100%; padding: 13px; background: var(--surface-2); border: 0; border-top: 1px solid var(--line); font-weight: 800; color: var(--accent-ink); font-size: 14px; }
 
+/* nav badge */
+.nav-badge { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--gold); color: #1c1400; font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; line-height: 1; }
+.nav-badge.late { background: var(--red); color: #fff; }
+.rail-link .nav-badge { margin-left: auto; }
+.tab .nav-badge { position: absolute; top: 7px; left: calc(50% + 7px); }
+
+/* ───────────────────────── missions ───────────────────────── */
+.chip.sm { padding: 2px 8px; font-size: 11.5px; }
+.m-summary { margin: 2px 0 16px; }
+.m-line { font-family: var(--font-display); font-weight: 600; font-size: clamp(19px, 4.6vw, 24px); letter-spacing: -.02em; line-height: 1.3; color: var(--ink); max-width: 46ch; }
+.m-today { display: flex; align-items: center; gap: 12px; margin-top: 10px; font-size: 13.5px; font-weight: 700; color: var(--ink-2); }
+.m-bar { flex: 1; max-width: 240px; height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.m-bar i { display: block; height: 100%; border-radius: 999px; background: var(--green); transition: width .4s var(--ease); }
+.m-bar.sm { height: 5px; max-width: none; margin: 8px 0 2px; }
+
+.m-qa { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--r-lg); padding: 8px 8px 10px 14px; margin-bottom: 18px; transition: border-color .15s, box-shadow .15s; }
+.m-qa:focus-within { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.m-qa-row { display: flex; align-items: center; gap: 10px; }
+.m-qa-emo { font-size: 20px; flex: none; }
+.m-qa-input { flex: 1; min-width: 0; height: 44px; border: 0; background: transparent; outline: none; font: 700 16px var(--font-ui); color: var(--ink); }
+.m-qa-input::placeholder { color: var(--muted); font-weight: 600; }
+.m-qa-btns { display: flex; gap: 6px; flex: none; }
+.m-qa-preview { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 2px 30px; }
+.m-qa-help { font-size: 12.5px; color: var(--muted); font-weight: 600; line-height: 1.5; padding: 4px 6px 0 30px; }
+.m-qa-help kbd { font: 800 11px var(--font-ui); background: var(--surface-3); border-radius: 5px; padding: 1px 5px; }
+@media (pointer: coarse) { .m-qa-help .k { display: none; } }
+@media (max-width: 520px) {
+  .m-qa-row { flex-wrap: wrap; }
+  .m-qa-btns { width: 100%; padding-left: 30px; }
+  .m-qa-btns .btn { flex: 1; }
+  .m-qa-help { padding-left: 0; }
+  .m-qa-preview { padding-left: 0; }
+}
+
+.m-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.m-search { flex: 1 1 180px; height: 46px; max-width: 340px; }
+.m-areas { margin-bottom: 16px; }
+.m-count { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--surface-3); color: var(--ink-2); font-size: 11.5px; font-weight: 800; }
+.pill.on .m-count { background: var(--accent); color: var(--on-accent); }
+
+.m-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 4px 10px; padding: 11px 14px 11px 8px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background-color .15s; outline: none; }
+.m-row:last-child { border-bottom: 0; }
+.m-row:hover { background: var(--surface-2); }
+.m-row:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.m-check { width: 32px; height: 32px; border: 0; background: none; display: grid; place-items: center; padding: 0; border-radius: 50%; }
+.m-check i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-2); display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 900; color: transparent; transition: background-color .15s, border-color .15s, color .15s, transform .2s var(--ease); }
+.m-check.pri-1 i { border-color: var(--red); background: var(--red-soft); }
+.m-check.pri-3 i { border-style: dashed; }
+.m-check:hover i { color: var(--muted); border-color: var(--green); }
+.m-check.on i, .m-row.completing .m-check i { background: var(--green); border-color: var(--green); color: #fff; }
+.m-row.completing .m-check i { animation: tick .42s var(--ease); }
+@keyframes tick { 40% { transform: scale(1.25); } }
+.m-row.completing .m-main, .m-row.completing .m-due { opacity: .45; transition: opacity .3s; }
+.m-row.completing .m-title > span:last-child { text-decoration: line-through; }
+.m-main { min-width: 0; }
+.m-title { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px; min-width: 0; }
+.m-title > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-flag { font-size: 10px; flex: none; }
+.m-row.done .m-title { color: var(--muted); }
+.m-row.done .m-title > span:last-child { text-decoration: line-through; }
+.m-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 2px; font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.m-area { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.m-area i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.m-steps-chip { border: 0; background: var(--surface-3); color: var(--ink-2); font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 999px; }
+.m-steps-chip.all { background: var(--green-soft); color: var(--green); }
+.m-steps-chip[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent-ink); }
+.m-due { flex: none; }
+.m-steps { grid-column: 2 / -1; display: flex; flex-direction: column; gap: 2px; padding: 6px 0 2px; cursor: default; }
+.m-step-line { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--ink-2); padding: 5px 0; cursor: pointer; }
+.m-step-line input, .m-step-edit input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green); flex: none; }
+.m-step-line.done span { text-decoration: line-through; color: var(--muted); }
+.group-head.m-late { color: var(--red); background: var(--red-soft); }
+
+.m-done-toggle { display: inline-flex; align-items: center; gap: 10px; border: 0; background: none; padding: 0; color: var(--ink); }
+.m-caret { font-size: 22px; font-weight: 800; color: var(--muted); transition: transform .2s var(--ease); display: inline-block; }
+.m-caret.open { transform: rotate(90deg); }
+
+.m-board { display: grid; grid-auto-flow: column; grid-auto-columns: 86%; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin: 0 -16px; padding: 2px 16px 6px; align-items: start; }
+.m-board::-webkit-scrollbar { display: none; }
+@media (min-width: 760px) { .m-board { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; overflow: visible; } }
+.m-col { background: var(--surface-2); border: 1.5px dashed transparent; border-radius: var(--r-lg); padding: 12px; min-height: 180px; scroll-snap-align: start; transition: border-color .15s, background-color .15s; }
+.m-col.drop { border-color: var(--accent); background: var(--accent-soft); }
+.m-col-head { display: flex; align-items: center; justify-content: space-between; font-weight: 800; font-size: 14.5px; padding: 2px 4px 4px; }
+.m-col-empty { font-size: 13px; color: var(--muted); font-weight: 600; text-align: center; padding: 18px 8px; }
+.m-col-add { width: 100%; margin-top: 8px; height: 40px; border-radius: 12px; border: 1.5px dashed var(--line-2); background: transparent; color: var(--ink-2); font-weight: 800; font-size: 13.5px; }
+.m-col-add:hover { border-color: var(--accent); color: var(--accent-ink); }
+.m-card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--line-2); border-radius: 14px; padding: 11px 12px 10px; margin-top: 8px; cursor: grab; box-shadow: var(--shadow-soft); transition: transform .15s var(--ease), box-shadow .15s, opacity .15s; outline: none; }
+.m-card.pri-1 { border-left-color: var(--red); }
+.m-card.pri-3 { border-left-color: var(--surface-3); }
+.m-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-float); }
+.m-card:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
+.m-card.dragging { opacity: .4; }
+.m-card-title { font-weight: 700; font-size: 14.5px; line-height: 1.35; display: flex; gap: 6px; align-items: baseline; overflow-wrap: anywhere; }
+.m-col[data-status="done"] .m-card-title { text-decoration: line-through; color: var(--muted); }
+.m-card-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; margin-top: 8px; }
+.m-meta-txt { font-size: 12px; color: var(--muted); font-weight: 700; }
+.m-move { margin-left: auto; border: 0; background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; font-size: 12.5px; height: 30px; padding: 0 12px; border-radius: 999px; }
+.m-move:hover { background: var(--accent); color: var(--on-accent); }
+
+.m-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.m-day { position: relative; aspect-ratio: 1; min-width: 0; border-radius: 11px; border: 1.5px solid transparent; background: var(--surface-2); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 5px; padding: 6px 2px 4px; color: var(--ink-2); overflow: hidden; transition: background-color .15s, border-color .15s; }
+.m-day:hover { border-color: var(--line-2); }
+.m-day.out { opacity: .38; }
+.m-day.today { border-color: var(--accent); }
+.m-day.today .m-dnum { color: var(--accent-ink); }
+.m-day.sel { background: var(--accent); border-color: var(--accent); }
+.m-day.sel .m-dnum { color: var(--on-accent); }
+.m-day.late:not(.sel) { background: var(--red-soft); }
+.m-dnum { font-weight: 800; font-size: 13px; line-height: 1; }
+.m-dots { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+.m-dots i { width: 6px; height: 6px; border-radius: 50%; display: block; }
+.m-dots i.done { opacity: .35; }
+.m-day.sel .m-dots i { box-shadow: 0 0 0 1.5px var(--on-accent); }
+.m-dtitles { display: none; }
+@media (min-width: 1180px) {
+  .m-day { aspect-ratio: auto; min-height: 92px; align-items: stretch; padding: 7px 6px; }
+  .m-dnum { padding-left: 2px; }
+  .m-dots { display: none; }
+  .m-dtitles { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .m-dt { display: block; font-size: 11.5px; font-weight: 700; color: var(--ink); background: var(--surface); border-left: 3px solid; border-radius: 5px; padding: 2px 5px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-dt.done { opacity: .5; text-decoration: line-through; }
+  .m-dmore { font-size: 11px; font-weight: 700; color: var(--muted); text-align: left; padding-left: 2px; }
+  .m-day.sel .m-dmore { color: var(--on-accent); }
+}
+
+.m-title-input { font-size: 18px; font-weight: 700; height: 54px; }
+.m-steps-edit { display: flex; flex-direction: column; gap: 6px; }
+.m-step-edit { display: grid; grid-template-columns: 22px minmax(0, 1fr) 32px 32px; align-items: center; gap: 6px; }
+.m-step-input { height: 40px; border: 1.5px solid var(--line); border-radius: 10px; background: var(--surface-2); padding: 0 10px; font: 600 15px var(--font-ui); color: var(--ink); min-width: 0; }
+.m-step-input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.m-step-input.done { text-decoration: line-through; color: var(--muted); }
+.icon-btn.plain:hover, .icon-btn.plain:focus-visible { background: var(--surface-3); color: var(--ink); }
+.m-status-seg button { padding: 0 8px; font-size: 13px; }
+.m-sheet-tools { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.m-sheet-tools .m-del { color: var(--red); margin-left: auto; }
+.m-sheet-tools .m-del:hover { border-color: var(--red); }
+.m-sql { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 500 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; color: var(--ink-2); }
+.m-steps-howto { padding-left: 20px; margin-bottom: 12px; font-weight: 600; color: var(--ink-2); line-height: 1.8; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
 }
@@ -645,6 +802,7 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
     <section class="view" id="view-gold" hidden></section>
     <section class="view" id="view-networth" hidden></section>
     <section class="view" id="view-analysis" hidden></section>
+    <section class="view" id="view-missions" hidden></section>
   </main>
 
   <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
@@ -667,6 +825,7 @@ const VIEWS = {
   gold:     { emoji: '💍', title: 'Gold' },
   networth: { emoji: '🏦', title: 'Net worth' },
   analysis: { emoji: '📊', title: 'Analysis' },
+  missions: { emoji: '🎯', title: 'Missions' },
 };
 const EXPENSE_CATS = ['Restaurant','Market','Meat','Cigarettes','Transport','Shopping','Health','Entertainment','Monthly Payments','Date & Romantic','Other'];
 const INCOME_CATS  = ['Scholarship','Mama','Manat','Salary','Freelance','Other'];
@@ -704,7 +863,7 @@ const ui = {
 };
 const animateNext = new Set(Object.keys(VIEWS));
 
-function emptyCache() { return { entries: [], trades: [], gold: [], thesis: [], prices: {}, priceStamp: null, accounts: [], snapshots: [] }; }
+function emptyCache() { return { entries: [], trades: [], gold: [], thesis: [], prices: {}, priceStamp: null, accounts: [], snapshots: [], missions: [] }; }
 function initialView() {
   const fromHash = (location.hash || '').slice(1);
   if (VIEWS[fromHash]) return fromHash;
@@ -930,12 +1089,15 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintThe
 
 /* ══════════════════════════ toast + tooltip ══════════════════════════ */
 let toastTimer;
-function toast(msg, kind = 'ok') {
+/* action: optional { label, onclick }, for example an Undo button */
+function toast(msg, kind = 'ok', action = null) {
   const t = $('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (kind === 'error' ? ' error' : '');
+  clear(t);
+  t.appendChild(h('span', null, msg));
+  if (action) t.appendChild(h('button', { class: 'toast-act', onclick: () => { t.className = 'toast'; clearTimeout(toastTimer); action.onclick(); } }, action.label));
+  t.className = 'toast show' + (kind === 'error' ? ' error' : '') + (action ? ' has-act' : '');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.className = 'toast'; }, kind === 'error' ? 4200 : 2400);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, action ? 5500 : kind === 'error' ? 4200 : 2400);
 }
 const tipEl = $('tip');
 let tipOwner = null;
@@ -1457,6 +1619,7 @@ function beginView(name) {
 /* ══════════════════════════ data ══════════════════════════ */
 async function refreshAll(first = false) {
   if (!user) return;
+  const missionsLoad = loadMissions();
   const [e, t, g, th, p, ac, sn] = await Promise.all([
     db.from('entries').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
     db.from('trades').select('*').order('trade_date', { ascending: false }).order('created_at', { ascending: false }),
@@ -1479,10 +1642,11 @@ async function refreshAll(first = false) {
   cache.priceStamp = stamps.length ? stamps[stamps.length - 1] : null;
   cache.accounts  = ac.data || [];
   cache.snapshots = sn.data || [];
+  await missionsLoad;
   renderAll();
   if (first) playIntro(ui.view);
 }
-function renderAll() { renderExpenses(); renderInvest(); renderGold(); renderNetWorth(); renderAnalysis(); }
+function renderAll() { renderExpenses(); renderInvest(); renderGold(); renderNetWorth(); renderAnalysis(); renderMissions(); paintNavBadge(); }
 
 /* ══════════════════════════ calculations ══════════════════════════ */
 function sumByCur(rows, type) {
@@ -1573,9 +1737,12 @@ function snapTotalIn(snap, b) {
 }
 
 /* ══════════════════════════ EXPENSES ══════════════════════════ */
+const ENTRY_CURS = ['GBP', 'AZN', 'USD'];
 function renderExpenses() {
   const root = beginView('expenses');
   root.appendChild(pageHead('expenses', { label: 'Add', onclick: () => openEntrySheet() }));
+  root.appendChild(currencyBar());
+  const ready = ratesReady(), b = base();
 
   const day = ui.day, t = todayStr();
   const dateInput = h('input', { type: 'date', value: day, 'aria-label': 'Pick a day',
@@ -1589,23 +1756,27 @@ function renderExpenses() {
 
   const dayRows = cache.entries.filter(e => e.date === day);
   const out = sumByCur(dayRows, 'expense'), inc = sumByCur(dayRows, 'income');
-  const order = c => (c === base() ? 0 : 1);
-  const outCurs = ['GBP', 'AZN'].filter(c => out[c] > 0).sort((a, b) => order(a) - order(b));
-  const inCurs = ['GBP', 'AZN'].filter(c => inc[c] > 0);
-  const combine = outCurs.length > 1 && ratesReady();
-  const b = base();
-  const combined = combine ? outCurs.reduce((a, c) => a + conv(out[c], c, b), 0) : 0;
-  let nums;
-  if (combine) nums = countEl(combined, v => money(v, b));
-  else if (outCurs.length) nums = outCurs.map(c => countEl(out[c], v => money(v, c)));
-  else nums = h('span', { class: 'hero-num zero' }, money(0, load('ledger.lastCur', 'GBP')));
+  const order = c => (c === b ? 0 : 1);
+  const outCurs = ENTRY_CURS.filter(c => out[c] > 0).sort((x, y) => order(x) - order(y));
+  const inCurs = ENTRY_CURS.filter(c => inc[c] > 0);
+  let nums, subBits = null, inBits;
+  if (ready) {
+    /* everything in the currency you picked, the original amounts as small chips */
+    const total = outCurs.reduce((a, c) => a + conv(out[c], c, b), 0);
+    nums = total > 0 ? countEl(total, v => money(v, b)) : h('span', { class: 'hero-num zero' }, money(0, b));
+    if (outCurs.some(c => c !== b)) subBits = [outCurs.map((c, i) => [i ? h('span', { 'aria-hidden': 'true' }, '+') : null, h('span', { class: 'chip neutral' }, money(out[c], c))]),
+      h('span', null, 'converted at your rates')];
+    const inTotal = inCurs.reduce((a, c) => a + conv(inc[c], c, b), 0);
+    inBits = inTotal > 0 ? h('span', { class: 'chip good' }, signed(inTotal, b) + ' in') : null;
+  } else {
+    if (outCurs.length) nums = outCurs.map(c => countEl(out[c], v => money(v, c)));
+    else nums = h('span', { class: 'hero-num zero' }, money(0, load('ledger.lastCur', 'GBP')));
+    inBits = inCurs.map(c => h('span', { class: 'chip good' }, signed(inc[c], c) + ' in'));
+  }
   root.appendChild(h('div', { class: 'hero' },
     h('div', { class: 'hero-label' }, day === t ? 'Spent today' : 'Spent on ' + fmtDay(day)),
-    h('div', { class: 'hero-nums' + (!combine && outCurs.length > 1 ? ' two' : '') }, nums),
-    h('div', { class: 'hero-sub' },
-      combine ? [outCurs.map((c, i) => [i ? h('span', { 'aria-hidden': 'true' }, '+') : null, h('span', { class: 'chip neutral' }, money(out[c], c))]),
-        h('span', null, 'at your rates')] : null,
-      inCurs.map(c => h('span', { class: 'chip good' }, signed(inc[c], c) + ' in')),
+    h('div', { class: 'hero-nums' + (!ready && outCurs.length > 1 ? ' two' : '') }, nums),
+    h('div', { class: 'hero-sub' }, subBits, inBits,
       h('span', null, dayRows.length ? dayRows.length + (dayRows.length === 1 ? ' entry' : ' entries') : 'Nothing logged yet'))));
 
   const left = h('div');
@@ -1625,7 +1796,9 @@ function renderExpenses() {
   if (!groups.length) recent.appendChild(empty('📅', 'No other entries in the last 7 days.'));
   groups.forEach(([d, rows]) => {
     const o = sumByCur(rows, 'expense');
-    const tot = ['GBP', 'AZN'].filter(c => o[c] > 0).map(c => money(o[c], c)).join(' and ');
+    let tot;
+    if (ready) { const v = sumBase(rows.filter(e => e.type === 'expense'), b); tot = v > 0 ? money(v, b) : ''; }
+    else tot = ENTRY_CURS.filter(c => o[c] > 0).map(c => money(o[c], c)).join(' and ');
     recent.appendChild(h('div', { class: 'group-head' }, h('span', null, dayTitle(d)), h('span', { class: 'gtot' }, tot ? tot + ' spent' : '')));
     rows.forEach(e => recent.appendChild(entryRow(e)));
   });
@@ -1634,27 +1807,81 @@ function renderExpenses() {
   /* month card */
   const ym = ui.month, mb = monthBounds(ym);
   const mRows = cache.entries.filter(e => e.date >= mb.first && e.date <= mb.last);
+  const mCurs = ENTRY_CURS.filter(c => mRows.some(e => (e.currency || 'GBP') === c));
+  const split = !ready || load('ledger.monthSplit', false);
   const monthPanel = h('div', { class: 'panel' },
     h('div', { class: 'month-nav' },
       h('div', { class: 't' }, monthLabel(ym)),
       h('div', { class: 'btns' },
         h('button', { class: 'nav-btn', 'aria-label': 'Previous month', onclick: () => { ui.month = addMonths(ui.month, -1); renderExpenses(); } }, '‹'),
         h('button', { class: 'nav-btn', 'aria-label': 'Next month', onclick: () => { ui.month = addMonths(ui.month, 1); renderExpenses(); } }, '›'))),
-    ['GBP', 'AZN'].filter(c => mRows.some(e => (e.currency || 'GBP') === c)).map(c => currencyBlock(mRows, c)),
-    mRows.length ? null : empty('🗓️', 'Nothing logged in ' + monthLabel(ym) + '.'));
+    ready && mRows.length ? h('div', { class: 'field' }, seg([['all', 'All in ' + SYM[b]], ['split', 'Each currency']], split ? 'split' : 'all',
+      v => { save('ledger.monthSplit', v === 'split'); renderExpenses(); }, { full: true })) : null,
+    mRows.length ? (split ? mCurs.map(c => currencyBlock(mRows, c)) : convertedBlock(mRows, b)) : empty('🗓️', 'Nothing logged in ' + monthLabel(ym) + '.'));
 
-  root.appendChild(h('div', { class: 'grid-2' }, left, h('div', null, monthPanel)));
+  root.appendChild(h('div', { class: 'grid-2' }, left, h('div', { class: 'stack-tight' }, converterPanel(), monthPanel)));
   ui.flashKey = null;
 }
 function stepDay(n) { ui.day = shiftDays(ui.day, n); ui.month = ui.day.slice(0, 7); renderExpenses(); }
 function entryRow(e) {
   const cur = e.currency || 'GBP', isIn = e.type === 'income';
   const key = e.date + '|' + e.description + '|' + num(e.amount);
+  const x = shown(e.amount, cur), sign = isIn ? '+' : '−';
   return h('div', { class: 'row' + (ui.flashKey === key ? ' row-new' : '') },
     h('div', { class: 'bubble emo' + (isIn ? ' in' : ''), 'aria-hidden': 'true' }, emojiFor(e)),
     h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, e.description), h('div', { class: 'row-sub' }, catLabel(e))),
-    h('div', { class: 'amt' + (isIn ? ' in' : '') }, (isIn ? '+' : '−') + money(e.amount, cur)),
+    h('div', null,
+      h('div', { class: 'amt' + (isIn ? ' in' : '') }, sign + money(x.v, x.cur)),
+      x.cur !== cur ? h('div', { class: 'amt-sub', title: 'What you entered' }, sign + money(e.amount, cur)) : null),
     delBtn(() => removeRow('entries', e.id, 'this entry'), 'Delete ' + e.description));
+}
+/* the month in one currency: everything converted at your rates */
+function convertedBlock(rows, b) {
+  const inc = sumBase(rows.filter(e => e.type === 'income'), b);
+  const expRows = rows.filter(e => e.type === 'expense');
+  const exp = sumBase(expRows, b), net = inc - exp;
+  const others = ENTRY_CURS.filter(c => c !== b && rows.some(e => (e.currency || 'GBP') === c));
+  return h('div', { class: 'cur-block' },
+    h('div', { class: 'cur-head' }, h('span', { class: 'cur-sym' }, SYM[b]), 'All in ' + CUR_NAME[b].toLowerCase(),
+      others.length ? h('span', { class: 'chip neutral', style: { marginLeft: 'auto' } }, others.map(c => SYM[c]).join(' ') + ' converted') : null),
+    h('div', { class: 'mini3' },
+      h('div', { class: 'mini' }, h('div', { class: 'mini-l' }, 'In'), h('div', { class: 'mini-v in' }, money(inc, b))),
+      h('div', { class: 'mini' }, h('div', { class: 'mini-l' }, 'Out'), h('div', { class: 'mini-v' }, money(exp, b))),
+      h('div', { class: 'mini' }, h('div', { class: 'mini-l' }, 'Net'), h('div', { class: 'mini-v ' + (net >= 0 ? 'in' : 'bad') }, money(net, b)))),
+    exp > 0 ? catBars(categoryRows(expRows, e => inBase(e, b)), b, { max: 6 }) : null);
+}
+/* quick converter between pounds, manat and dollars, using the same rates as every page */
+const CV_CURS = [['GBP', '£'], ['AZN', '₼'], ['USD', '$']];
+function converterPanel() {
+  const head = h('div', { class: 'month-nav' }, h('div', { class: 't' }, '💱 Converter'),
+    h('button', { class: 'btn btn-ghost sm', onclick: e => fetchLiveRates(e.currentTarget) }, '↻ Live rates'));
+  if (!ratesReady()) return h('div', { class: 'panel' }, head,
+    h('div', { class: 'hint box' }, 'Add your two exchange rates once and the converter works here and on every page.'),
+    h('button', { class: 'btn btn-soft sm', style: { marginTop: '12px' }, onclick: openRatesSheet }, 'Set rates'));
+  if (!ui.cvFrom) ui.cvFrom = base();
+  const amount = h('input', { class: 'cv-input', type: 'text', inputmode: 'decimal', placeholder: '0.00', value: ui.cvAmt || '', 'aria-label': 'Amount to convert', autocomplete: 'off', enterkeyhint: 'done' });
+  const list = h('div', { class: 'cv-list' });
+  const paint = () => {
+    clear(list);
+    const a = parseAmount(amount.value), from = ui.cvFrom;
+    CV_CURS.filter(([c]) => c !== from).forEach(([c]) => {
+      const v = conv(a, from, c), one = conv(1, from, c);
+      list.appendChild(h('button', { type: 'button', class: 'cv-row', title: 'Convert from ' + CUR_NAME[c].toLowerCase() + ' instead',
+        onclick: () => { ui.cvAmt = a ? String(Number(v.toFixed(2))) : ''; ui.cvFrom = c; amount.value = ui.cvAmt; fromSeg.replaceWith(fromSeg = makeSeg()); paint(); } },
+        h('span', { class: 'cur-sym' }, SYM[c]),
+        h('span', { class: 'cv-name' }, CUR_NAME[c], h('span', { class: 'cv-rate' }, SYM[from] + '1 = ' + SYM[c] + fmtRate(one))),
+        h('span', { class: 'cv-val' }, money(v, c))));
+    });
+  };
+  const makeSeg = () => seg(CV_CURS, ui.cvFrom, v => { ui.cvFrom = v; paint(); });
+  let fromSeg = makeSeg();
+  amount.addEventListener('input', () => { ui.cvAmt = amount.value; paint(); });
+  amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); amount.blur(); } });
+  paint();
+  const stamp = rates.at ? 'Live rates from ' + new Date(rates.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.' : 'Using the rates you typed in.';
+  return h('div', { class: 'panel' }, head,
+    h('div', { class: 'cv-top' }, amount, fromSeg), list,
+    h('div', { class: 'foot-note' }, stamp + ' Tap a result to convert from it.'));
 }
 function categoryRows(rows, valueOf) {
   const map = new Map();
@@ -2269,7 +2496,7 @@ function buckets(from, to, byDate) {
   return { items, unit: 'month', unitTitle: 'by month' };
 }
 function separateSection(rows) {
-  const curs = ['GBP', 'AZN'].filter(c => rows.some(e => (e.currency || 'GBP') === c));
+  const curs = ENTRY_CURS.filter(c => rows.some(e => (e.currency || 'GBP') === c));
   return section('Each currency on its own', 'Exactly as you entered it, with no conversion.',
     h('div', { class: 'panel' }, curs.length ? curs.map(c => currencyBlock(rows, c)) : empty('🗓️', 'Nothing logged in this period.')));
 }
@@ -2301,6 +2528,740 @@ function portfolioChecks(b) {
         chip: h('span', { class: 'chip ' + (goldShare <= 20 ? 'good' : 'bad') }, goldShare <= 20 ? '✓ under 20%' : '⚠ over 20%'),
         note: 'Gold sits still while funds grow. Keep it a side dish.' }) : null));
 }
+
+/* ══════════════════════════ MISSIONS ══════════════════════════ */
+/* Deadlines and things to do, for university, work and life.
+   Saved in the Supabase "missions" table. If that table is not there yet,
+   they are kept in this browser until it is, then moved up with one tap. */
+const M_AREAS = {
+  uni:      ['🎓', 'University', 'var(--c1)'],
+  work:     ['💼', 'Work', 'var(--c7)'],
+  personal: ['🙋', 'Personal', 'var(--c3)'],
+  health:   ['💪', 'Health', 'var(--c5)'],
+  money:    ['💰', 'Money', 'var(--c4)'],
+  home:     ['🏠', 'Home', 'var(--c2)'],
+  other:    ['📌', 'Other', 'var(--muted)'],
+};
+const M_ALIAS = {
+  uni: 'uni', university: 'uni', school: 'uni', phd: 'uni', study: 'uni', class: 'uni', uofg: 'uni', glasgow: 'uni',
+  work: 'work', job: 'work', office: 'work', personal: 'personal', me: 'personal', life: 'personal', family: 'personal',
+  health: 'health', gym: 'health', sport: 'health', football: 'health', doctor: 'health',
+  money: 'money', finance: 'money', bank: 'money', invest: 'money', bills: 'money', home: 'home', house: 'home', dorm: 'home', flat: 'home', other: 'other',
+};
+const M_REPEAT = { daily: 'Every day', weekly: 'Every week', monthly: 'Every month' };
+const M_STATUS = [['todo', '📋 To do'], ['doing', '⚡ In progress'], ['done', '✅ Done']];
+const M_BUCKETS = [['overdue', '⚠️ Overdue'], ['today', 'Today'], ['tomorrow', 'Tomorrow'], ['week', 'Later this week'], ['next', 'Next week'], ['later', 'Later'], ['none', 'No date']];
+const DAY_NAMES = { sun: 0, sunday: 0, mon: 1, monday: 1, tue: 2, tues: 2, tuesday: 2, wed: 3, weds: 3, wednesday: 3, thu: 4, thur: 4, thurs: 4, thursday: 4, fri: 5, friday: 5, sat: 6, saturday: 6 };
+const MONTH_NAMES = { jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8, oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11 };
+const MISSIONS_SQL = `-- Ledger: missions table. Run this once in Supabase, SQL Editor, New query.
+create table if not exists public.missions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title text not null,
+  notes text,
+  area text not null default 'personal',
+  priority smallint not null default 2,
+  status text not null default 'todo',
+  due_date date,
+  due_time time,
+  repeat text,
+  steps jsonb not null default '[]'::jsonb,
+  done_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists missions_user_due on public.missions (user_id, due_date);
+alter table public.missions enable row level security;
+drop policy if exists "missions are yours" on public.missions;
+create policy "missions are yours" on public.missions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);`;
+
+let mStore = 'db', mLoadErr = null;
+const mUi = {
+  view: load('ledger.mView', 'list'), area: 'all', q: '', showDone: load('ledger.mShowDone', false), doneLimit: 15,
+  month: todayStr().slice(0, 7), day: todayStr(), openSteps: new Set(), flash: null, refocusQuick: false,
+};
+
+function uid() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+}
+const isMissingTable = e => ['PGRST205', '42P01', 'PGRST106'].includes(e?.code) || /missions/i.test(e?.message || '') && /(could not find|does not exist|schema cache)/i.test(e?.message || '');
+const localMissions = () => load('ledger.missions', []);
+function saveLocalMissions() { save('ledger.missions', cache.missions); }
+
+async function loadMissions() {
+  let res;
+  try { res = await db.from('missions').select('*').order('created_at'); }
+  catch (e) { res = { error: { message: e?.message || 'network error' } }; }
+  if (res.error) {
+    if (isMissingTable(res.error)) { mStore = 'local'; mLoadErr = null; cache.missions = localMissions(); }
+    else { mLoadErr = res.error.message; if (mStore === 'local') cache.missions = localMissions(); }
+    return;
+  }
+  mStore = 'db'; mLoadErr = null;
+  cache.missions = (res.data || []).map(normMission);
+}
+function normMission(m) {
+  return { ...m, steps: Array.isArray(m.steps) ? m.steps : [], priority: Number(m.priority) || 2, due_time: m.due_time ? String(m.due_time).slice(0, 5) : null, area: M_AREAS[m.area] ? m.area : 'other' };
+}
+const dbRow = m => { const r = { ...m }; if (r.due_time === '') r.due_time = null; return r; };
+
+/* every change shows at once, then is saved. If saving fails it is undone and you are told. */
+async function mInsert(rows) {
+  const now = new Date().toISOString();
+  rows = rows.map(r => normMission({ created_at: now, updated_at: now, status: 'todo', priority: 2, steps: [], ...r, id: r.id || uid() }));
+  cache.missions.push(...rows); missionsChanged();
+  if (mStore === 'local') { saveLocalMissions(); return rows; }
+  const { error } = await db.from('missions').insert(rows.map(r => dbRow({ ...r, user_id: user.id })));
+  if (error) {
+    const ids = new Set(rows.map(r => r.id));
+    cache.missions = cache.missions.filter(m => !ids.has(m.id)); missionsChanged();
+    toast('Could not save: ' + error.message, 'error'); return null;
+  }
+  return rows;
+}
+async function mPatch(id, patch) {
+  const m = cache.missions.find(x => x.id === id); if (!m) return false;
+  const before = { ...m };
+  const full = { ...patch, updated_at: new Date().toISOString() };
+  Object.assign(m, normMission({ ...m, ...full })); missionsChanged();
+  if (mStore === 'local') { saveLocalMissions(); return true; }
+  const { error } = await db.from('missions').update(dbRow(full)).eq('id', id);
+  if (error) { Object.assign(m, before); missionsChanged(); toast('Could not save: ' + error.message, 'error'); return false; }
+  return true;
+}
+async function mDelete(ids) {
+  ids = [].concat(ids);
+  const gone = cache.missions.filter(m => ids.includes(m.id));
+  cache.missions = cache.missions.filter(m => !ids.includes(m.id)); missionsChanged();
+  if (mStore === 'local') { saveLocalMissions(); return gone; }
+  const { error } = await db.from('missions').delete().in('id', ids);
+  if (error) { cache.missions.push(...gone); missionsChanged(); toast('Could not delete: ' + error.message, 'error'); return null; }
+  return gone;
+}
+function missionsChanged() { renderMissions({ quiet: true }); paintNavBadge(); }
+
+async function moveLocalMissionsUp(btn) {
+  const rows = localMissions();
+  if (!rows.length) return;
+  btn.disabled = true; btn.textContent = 'Moving…';
+  const { error } = await db.from('missions').insert(rows.map(r => dbRow({ ...normMission(r), user_id: user.id })));
+  if (error) { btn.disabled = false; btn.textContent = 'Try again'; return toast('Could not move them: ' + error.message, 'error'); }
+  save('ledger.missions', []);
+  toast('Moved ' + rows.length + (rows.length === 1 ? ' mission' : ' missions') + ' to your account');
+  await loadMissions(); missionsChanged();
+}
+
+/* ── dates ── */
+function nextWeekday(from, wd) { const d = dateOf(from); const diff = (wd - d.getDay() + 7) % 7; d.setDate(d.getDate() + diff); return iso(d); }
+function addMonthsKeepDay(s, n) {
+  const d = dateOf(s), day = d.getDate();
+  d.setDate(1); d.setMonth(d.getMonth() + n);
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, last)); return iso(d);
+}
+function nextDue(s, rep) {
+  const t = todayStr();
+  const step = d => rep === 'daily' ? shiftDays(d, 1) : rep === 'weekly' ? shiftDays(d, 7) : addMonthsKeepDay(d, 1);
+  let n = step(s);
+  for (let i = 0; i < 400 && n < t; i++) n = step(n);   // an old repeating mission jumps to the next date that is still ahead
+  return n;
+}
+function quickDates() {
+  const t = todayStr();
+  const sat = nextWeekday(t, 6);
+  return [['', 'No date'], [t, 'Today'], [shiftDays(t, 1), 'Tomorrow'], [sat === t ? t : sat, 'Weekend'], [shiftDays(startOfWeek(t), 7), 'Next week']];
+}
+function mDayTitle(d) { const t = todayStr(); return d === shiftDays(t, 1) ? 'Tomorrow' : dayTitle(d); }
+function dayPhrase(d) { const t = mDayTitle(d); return ['Today', 'Tomorrow', 'Yesterday'].includes(t) ? t.toLowerCase() : 'on ' + t + (d.slice(0, 4) !== todayStr().slice(0, 4) ? ' ' + d.slice(0, 4) : ''); }
+function fmtTime(t) { return t ? String(t).slice(0, 5) : ''; }
+
+/* ── quick add: "Ethics form fri 5pm #uni !" ── */
+function parseQuick(text) {
+  const out = { area: null, priority: null, due_date: null, due_time: null };
+  let s = ' ' + text.replace(/\s+/g, ' ') + ' ';
+  const t = todayStr();
+  const take = (re, fn) => { s = s.replace(re, (...m) => { const r = fn(...m); return r === false ? m[0] : ' '; }); };
+
+  take(/\s#([\p{L}\d]+)(?=\s)/giu, (m, tag) => { const a = M_ALIAS[tag.toLowerCase()]; if (!a) return false; out.area = a; });
+  take(/\s!(high|h|urgent|low|l)?(?=\s)/gi, (m, w) => { out.priority = w && /^l/i.test(w) ? 3 : 1; });
+  take(/\s!!+(?=\s)/g, () => { out.priority = 1; });
+
+  const pre = '(?:(?:by|on|due|until|till)\\s+)?';
+  // times: at 9, 9am, 3:30pm, 14:00
+  take(new RegExp('\\s(?:at\\s+)?(\\d{1,2})(?::(\\d{2}))?\\s?(am|pm)(?=\\s)', 'gi'), (m, hh, mm, ap) => {
+    let H = Number(hh) % 12; if (/pm/i.test(ap)) H += 12; if (H > 23) return false;
+    out.due_time = String(H).padStart(2, '0') + ':' + (mm || '00');
+  });
+  take(/\s(?:at\s+)?([01]?\d|2[0-3]):([0-5]\d)(?=\s)/g, (m, hh, mm) => { out.due_time = hh.padStart(2, '0') + ':' + mm; });
+  take(/\sat\s+([01]?\d|2[0-3])(?=\s)/gi, (m, hh) => { out.due_time = hh.padStart(2, '0') + ':00'; });
+
+  const setDate = d => { if (!out.due_date) out.due_date = d; };
+  take(new RegExp('\\s' + pre + '(today|tonight|tdy)(?=\\s)', 'gi'), () => setDate(t));
+  take(new RegExp('\\s' + pre + '(tomorrow|tmr|tmrw|tomoz)(?=\\s)', 'gi'), () => setDate(shiftDays(t, 1)));
+  take(new RegExp('\\s' + pre + '(?:the\\s+)?(?:this\\s+)?weekend(?=\\s)', 'gi'), () => setDate(nextWeekday(t, 6)));
+  take(new RegExp('\\s' + pre + 'next\\s+week(?=\\s)', 'gi'), () => setDate(shiftDays(startOfWeek(t), 7)));
+  take(new RegExp('\\s' + pre + 'next\\s+month(?=\\s)', 'gi'), () => setDate(addMonths(t.slice(0, 7), 1) + '-01'));
+  take(new RegExp('\\s' + pre + 'in\\s+(\\d{1,3}|a|one|two|three)\\s+(day|days|week|weeks|month|months)(?=\\s)', 'gi'), (m, n, u) => {
+    const k = { a: 1, one: 1, two: 2, three: 3 }[n.toLowerCase()] || Number(n);
+    setDate(/^m/i.test(u) ? addMonthsKeepDay(t, k) : shiftDays(t, /^w/i.test(u) ? k * 7 : k));
+  });
+  take(new RegExp('\\s' + pre + '(next\\s+)?(' + Object.keys(DAY_NAMES).join('|') + ')(?=\\s)', 'gi'), (m, nx, dn) => {
+    let d = nextWeekday(t, DAY_NAMES[dn.toLowerCase()]);
+    if (nx && startOfWeek(d) === startOfWeek(t)) d = shiftDays(d, 7);
+    setDate(d);
+  });
+  const fixYear = (mo, dd, yy) => {
+    let y = yy ? (yy.length === 2 ? 2000 + Number(yy) : Number(yy)) : Number(t.slice(0, 4));
+    const mk = () => y + '-' + String(mo + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+    if (dd < 1 || dd > 31 || mo < 0 || mo > 11) return false;
+    let d = mk();
+    if (!yy && daysBetween(d, t) > 60) { y++; d = mk(); }   // a date a few weeks back stays this year, so it shows as late
+    if (iso(dateOf(d)) !== d) return false;   // 31 Feb and friends
+    setDate(d);
+  };
+  const months = Object.keys(MONTH_NAMES).join('|');
+  take(new RegExp('\\s' + pre + '(\\d{1,2})(?:st|nd|rd|th)?\\s+(' + months + ')(?:\\s+(\\d{4}))?(?=\\s)', 'gi'), (m, dd, mo, yy) => fixYear(MONTH_NAMES[mo.toLowerCase()], Number(dd), yy));
+  take(new RegExp('\\s' + pre + '(' + months + ')\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s+(\\d{4}))?(?=\\s)', 'gi'), (m, mo, dd, yy) => fixYear(MONTH_NAMES[mo.toLowerCase()], Number(dd), yy));
+  take(new RegExp('\\s' + pre + '(\\d{1,2})[/.](\\d{1,2})(?:[/.](\\d{2,4}))?(?=\\s)', 'g'), (m, dd, mm, yy) => fixYear(Number(mm) - 1, Number(dd), yy));
+
+  if (out.due_time && !out.due_date) out.due_date = t;
+  out.title = s.replace(/\s+(by|on|due)\s*$/i, ' ').replace(/\s+/g, ' ').trim();
+  return out;
+}
+
+/* ── how a mission's deadline reads ── */
+function dueInfo(m) {
+  if (!m.due_date) return null;
+  const t = todayStr(), d = daysBetween(t, m.due_date), tm = fmtTime(m.due_time);
+  const full = fmtDate(m.due_date) + (tm ? ' at ' + tm : '');
+  if (m.status === 'done') return { text: dateOf(m.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), cls: 'neutral', full };
+  if (d < 0) return { text: d === -1 ? 'Yesterday' : Math.abs(d) + ' days late', cls: 'bad', full: full + ', ' + Math.abs(d) + (d === -1 ? ' day' : ' days') + ' ago' };
+  if (d === 0) {
+    const late = tm && tm < new Date().toTimeString().slice(0, 5);
+    return { text: (tm ? tm : 'Today') + (late ? ', late' : ''), cls: late ? 'bad' : 'gold', full: 'Today' + (tm ? ' at ' + tm : '') };
+  }
+  if (d === 1) return { text: 'Tomorrow' + (tm ? ' ' + tm : ''), cls: 'accent', full: full + ', in 1 day' };
+  const label = d < 7 ? dateOf(m.due_date).toLocaleDateString('en-GB', { weekday: 'short' })
+    : dateOf(m.due_date).toLocaleDateString('en-GB', d > 300 ? { day: 'numeric', month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' });
+  return { text: label + (tm ? ' ' + tm : ''), cls: 'neutral', full: full + ', in ' + d + ' days' };
+}
+function mBucket(m, t) {
+  if (!m.due_date) return 'none';
+  const d = daysBetween(t, m.due_date);
+  if (d < 0) return 'overdue';
+  if (d === 0) return 'today';
+  if (d === 1) return 'tomorrow';
+  const endWeek = shiftDays(startOfWeek(t), 6);
+  if (m.due_date <= endWeek) return 'week';
+  if (m.due_date <= shiftDays(endWeek, 7)) return 'next';
+  return 'later';
+}
+const mSort = (a, b) =>
+  (a.due_date || '9999').localeCompare(b.due_date || '9999') ||
+  (fmtTime(a.due_time) || '99').localeCompare(fmtTime(b.due_time) || '99') ||
+  (a.priority - b.priority) || (a.status === 'doing' ? -1 : 0) - (b.status === 'doing' ? -1 : 0) ||
+  (a.created_at || '').localeCompare(b.created_at || '');
+const doneDay = m => m.done_at ? new Date(m.done_at).toLocaleDateString('en-CA') : null;
+function missionCounts() {
+  const t = todayStr(), open = cache.missions.filter(m => m.status !== 'done');
+  return {
+    open: open.length,
+    overdue: open.filter(m => m.due_date && m.due_date < t).length,
+    today: open.filter(m => m.due_date === t).length,
+    week: open.filter(m => m.due_date && m.due_date > t && m.due_date <= shiftDays(t, 7)).length,
+    doneWeek: cache.missions.filter(m => m.status === 'done' && doneDay(m) && doneDay(m) >= shiftDays(t, -6)).length,
+    todayAll: cache.missions.filter(m => m.due_date === t).length,
+    todayDone: cache.missions.filter(m => m.due_date === t && m.status === 'done').length,
+  };
+}
+function paintNavBadge() {
+  const c = missionCounts(), n = c.overdue + c.today;
+  document.querySelectorAll('[data-nav="missions"]').forEach(b => {
+    let badge = b.querySelector('.nav-badge');
+    if (!n) { badge?.remove(); return; }
+    if (!badge) { badge = h('span', { class: 'nav-badge' }); b.appendChild(badge); }
+    badge.textContent = n > 99 ? '99+' : String(n);
+    badge.classList.toggle('late', c.overdue > 0);
+    badge.setAttribute('aria-label', (c.overdue ? c.overdue + ' overdue, ' : '') + c.today + ' due today');
+  });
+}
+
+/* ── done, undo and repeat ── */
+async function setMissionStatus(m, status) {
+  if (status === m.status) return;
+  if (status === 'done') return completeMission(m);
+  const was = m.status;
+  await mPatch(m.id, { status, done_at: null });
+  if (was === 'done') toast('Back on your list');
+}
+async function completeMission(m) {
+  if (m.status === 'done') return setMissionStatus(m, 'todo');
+  const prev = m.status;
+  let next = null;
+  if (m.repeat && m.due_date) {
+    next = { title: m.title, notes: m.notes, area: m.area, priority: m.priority, repeat: m.repeat, due_time: m.due_time,
+      due_date: nextDue(m.due_date, m.repeat), steps: (m.steps || []).map(st => ({ ...st, id: uid(), done: false })), status: 'todo' };
+  }
+  const ok = await mPatch(m.id, { status: 'done', done_at: new Date().toISOString() });
+  if (!ok) return;
+  const made = next ? await mInsert([next]) : null;
+  toast(made ? 'Done. The next one is due ' + dayPhrase(made[0].due_date) : 'Done. Nice work 🎉', 'ok', {
+    label: 'Undo', onclick: async () => { await mPatch(m.id, { status: prev, done_at: null }); if (made) await mDelete(made[0].id); },
+  });
+}
+async function deleteMission(m) {
+  const copy = { ...m };
+  const gone = await mDelete(m.id);
+  if (gone) toast('Mission deleted', 'ok', { label: 'Undo', onclick: () => mInsert([copy]) });
+}
+async function clearDone() {
+  const done = cache.missions.filter(m => m.status === 'done');
+  if (!done.length) return;
+  if (!confirm('Remove all ' + done.length + ' finished missions? You can undo this for a few seconds.')) return;
+  const copies = done.map(m => ({ ...m }));
+  const gone = await mDelete(done.map(m => m.id));
+  if (gone) toast('Cleared ' + gone.length + ' finished', 'ok', { label: 'Undo', onclick: () => mInsert(copies) });
+}
+
+/* ── add to phone calendar (.ics) so it can remind you ── */
+function icsFor(m) {
+  const esc = v => String(v || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/[,;]/g, x => '\\' + x);
+  const ymd = d => d.replace(/-/g, '');
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Ledger//Missions//EN', 'CALSCALE:GREGORIAN', 'BEGIN:VEVENT',
+    'UID:' + m.id + '@ledger', 'DTSTAMP:' + stamp];
+  const tm = fmtTime(m.due_time);
+  if (tm) {
+    const start = dateOf(m.due_date); start.setHours(Number(tm.slice(0, 2)), Number(tm.slice(3, 5)), 0, 0);
+    const end = new Date(start.getTime() + 3600000);
+    const f = d => iso(d).replace(/-/g, '') + 'T' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0') + '00';
+    lines.push('DTSTART:' + f(start), 'DTEND:' + f(end));
+  } else lines.push('DTSTART;VALUE=DATE:' + ymd(m.due_date), 'DTEND;VALUE=DATE:' + ymd(shiftDays(m.due_date, 1)));
+  if (m.repeat) lines.push('RRULE:FREQ=' + { daily: 'DAILY', weekly: 'WEEKLY', monthly: 'MONTHLY' }[m.repeat]);
+  const steps = (m.steps || []).map(st => (st.done ? '[x] ' : '[ ] ') + st.text).join('\n');
+  lines.push('SUMMARY:' + esc((M_AREAS[m.area]?.[0] || '') + ' ' + m.title),
+    'DESCRIPTION:' + esc([m.notes, steps].filter(Boolean).join('\n\n')),
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' + esc(m.title), 'TRIGGER:' + (tm ? '-PT1H' : '-PT15H'), 'END:VALARM',
+    'END:VEVENT', 'END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function downloadIcs(m) {
+  if (!m.due_date) return toast('Give it a date first', 'error');
+  const blob = new Blob([icsFor(m)], { type: 'text/calendar' });
+  const a = h('a', { href: URL.createObjectURL(blob), download: (m.title || 'mission').replace(/[^\p{L}\d]+/gu, '-').slice(0, 40) + '.ics' });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('Calendar file ready. Open it to add a reminder');
+}
+
+/* ── page ── */
+function renderMissions({ quiet = false } = {}) {
+  const root = beginView('missions');
+  if (quiet) root.classList.remove('view-enter');
+  root.appendChild(pageHead('missions', { label: 'Mission', onclick: () => openMissionSheet(null, mPreset()) }));
+  const c = missionCounts(), t = todayStr();
+
+  /* where they are saved */
+  if (mStore === 'local') root.appendChild(h('div', { class: 'callout' },
+    h('span', { class: 'emo', 'aria-hidden': 'true' }, '💾'),
+    h('div', null,
+      h('div', { class: 'callout-title' }, 'Saved on this device for now'),
+      h('p', null, 'Everything works already, but missions live only in this browser. Run the setup once in Supabase and they sync to your phone and laptop.'),
+      h('div', { class: 'filter-line', style: { marginTop: '10px' } },
+        h('button', { class: 'btn btn-primary sm', onclick: openMissionSetupSheet }, 'Set up sync'),
+        h('button', { class: 'btn btn-ghost sm', onclick: copySetupSql }, 'Copy SQL')))));
+  else if (localMissions().length) root.appendChild(h('div', { class: 'callout' },
+    h('span', { class: 'emo', 'aria-hidden': 'true' }, '☁️'),
+    h('div', null,
+      h('div', { class: 'callout-title' }, localMissions().length + ' missions are still only on this device'),
+      h('p', null, 'Sync is ready now. Move them to your account so your other devices see them too.'),
+      h('button', { class: 'btn btn-primary sm', style: { marginTop: '10px' }, onclick: e => moveLocalMissionsUp(e.currentTarget) }, 'Move them up'))));
+  if (mLoadErr) root.appendChild(h('div', { class: 'hint box', style: { marginBottom: '16px' } }, '⚠️ Could not load missions: ' + mLoadErr));
+
+  /* summary */
+  let line;
+  if (!cache.missions.length) line = 'Write down what is coming up. Deadlines, tasks, anything you do not want to forget.';
+  else {
+    const bits = [];
+    if (c.overdue) bits.push(c.overdue + ' overdue');
+    if (c.today) bits.push(c.today + ' due today');
+    line = bits.length ? 'You have ' + bits.join(' and ') + '.' : c.week ? (c.todayDone ? 'Today is done. ' : 'Nothing due today. ') + c.week + ' coming up in the next 7 days.' : c.open ? 'All clear for now. Nothing due in the next 7 days.' : 'Everything is done. Enjoy it.';
+  }
+  const pctToday = c.todayAll ? c.todayDone / c.todayAll * 100 : 0;
+  root.appendChild(h('div', { class: 'm-summary' },
+    h('div', { class: 'm-line' }, line),
+    c.todayAll ? h('div', { class: 'm-today' },
+      h('span', null, 'Today ' + c.todayDone + ' of ' + c.todayAll + ' done'),
+      h('div', { class: 'm-bar' }, h('i', { class: 'grow-x', style: { width: pctToday + '%' } }))) : null));
+  root.appendChild(h('div', { class: 'stats four' },
+    stat('Overdue', h('span', { class: c.overdue ? 'neg' : '' }, String(c.overdue)), c.overdue ? 'needs you first' : 'nothing late'),
+    stat('Due today', String(c.today), c.today ? 'still to do' : 'nothing left today'),
+    stat('Next 7 days', String(c.week), 'coming up'),
+    stat('Done this week', h('span', { class: c.doneWeek ? 'pos' : '' }, String(c.doneWeek)), 'last 7 days')));
+
+  root.appendChild(quickAddPanel());
+
+  /* view switch, search, areas */
+  const search = h('input', { class: 'input m-search', id: 'mSearch', type: 'search', placeholder: '🔍 Search', value: mUi.q, 'aria-label': 'Search missions', autocomplete: 'off' });
+  let bodyRef = missionsBody(), st;
+  search.addEventListener('input', () => { mUi.q = search.value; clearTimeout(st); st = setTimeout(() => { const n = missionsBody(); bodyRef.replaceWith(n); bodyRef = n; }, 120); });
+  root.appendChild(h('div', { class: 'm-toolbar' },
+    seg([['list', '☰ List'], ['board', '▦ Board'], ['cal', '📅 Calendar']], mUi.view, v => { mUi.view = v; save('ledger.mView', v); renderMissions({ quiet: true }); }),
+    search));
+  const openByArea = {};
+  cache.missions.forEach(m => { if (m.status !== 'done') openByArea[m.area] = (openByArea[m.area] || 0) + 1; });
+  root.appendChild(h('div', { class: 'scroller m-areas', role: 'radiogroup', 'aria-label': 'Area' },
+    h('button', { class: 'pill' + (mUi.area === 'all' ? ' on' : ''), role: 'radio', 'aria-checked': mUi.area === 'all', onclick: () => { mUi.area = 'all'; renderMissions({ quiet: true }); } }, 'All', h('span', { class: 'm-count' }, String(c.open))),
+    Object.entries(M_AREAS).filter(([k]) => openByArea[k] || mUi.area === k || ['uni', 'work', 'personal'].includes(k)).map(([k, [e, l]]) =>
+      h('button', { class: 'pill' + (mUi.area === k ? ' on' : ''), role: 'radio', 'aria-checked': mUi.area === k, onclick: () => { mUi.area = mUi.area === k ? 'all' : k; renderMissions({ quiet: true }); } },
+        h('span', { class: 'emo', 'aria-hidden': 'true' }, e), l, openByArea[k] ? h('span', { class: 'm-count' }, String(openByArea[k])) : null))));
+  root.appendChild(bodyRef);
+
+  if (mUi.refocusQuick) { mUi.refocusQuick = false; requestAnimationFrame(() => $('mQuick')?.focus()); }
+  mUi.flash = null;
+}
+function mPreset() {
+  const p = {};
+  if (mUi.area !== 'all') p.area = mUi.area;
+  if (mUi.view === 'cal') p.due_date = mUi.day;
+  return p;
+}
+function mFiltered() {
+  const q = mUi.q.trim().toLowerCase();
+  return cache.missions.filter(m => (mUi.area === 'all' || m.area === mUi.area) &&
+    (!q || [m.title, m.notes, ...(m.steps || []).map(s2 => s2.text), M_AREAS[m.area]?.[1]].join(' ').toLowerCase().includes(q)));
+}
+function missionsBody() {
+  if (mUi.view === 'board') return boardView();
+  if (mUi.view === 'cal') return calendarView();
+  return listView();
+}
+
+function quickAddPanel() {
+  const inp = h('input', { class: 'm-qa-input', id: 'mQuick', type: 'text', maxlength: 200, autocomplete: 'off', enterkeyhint: 'done',
+    placeholder: 'Add a mission, like “Ethics form fri 5pm #uni !”', 'aria-label': 'Add a mission' });
+  const preview = h('div', { class: 'm-qa-preview', 'aria-live': 'polite' });
+  const addBtn = h('button', { class: 'btn btn-primary sm', type: 'button' }, 'Add');
+  const moreBtn = h('button', { class: 'btn btn-ghost sm', type: 'button', title: 'Open with more options' }, 'Details');
+  const parsed = () => {
+    const p = parseQuick(inp.value), d = mPreset();
+    return { ...d, ...Object.fromEntries(Object.entries(p).filter(([, v]) => v !== null && v !== '')), title: p.title };
+  };
+  const paint = () => {
+    clear(preview);
+    if (!inp.value.trim()) { preview.hidden = true; return; }
+    const p = parsed(); preview.hidden = false;
+    const a = M_AREAS[p.area || 'personal'];
+    append(preview, [
+      h('span', { class: 'chip neutral' }, a[0] + ' ' + a[1]),
+      p.due_date ? h('span', { class: 'chip accent' }, '📅 ' + mDayTitle(p.due_date) + (p.due_time ? ' ' + p.due_time : '')) : h('span', { class: 'chip neutral' }, 'No date'),
+      p.priority === 1 ? h('span', { class: 'chip bad' }, '🔴 High') : p.priority === 3 ? h('span', { class: 'chip neutral' }, 'Low') : null,
+      p.title ? null : h('span', { class: 'chip bad' }, 'Add a few words')]);
+  };
+  const add = async () => {
+    const p = parsed();
+    if (!p.title) return shake(inp);
+    const row = { area: 'personal', ...p, id: uid() };
+    inp.value = ''; paint();
+    mUi.flash = row.id; mUi.refocusQuick = true;
+    const made = await mInsert([row]);
+    if (made) toast('Added' + (row.due_date ? ', due ' + dayPhrase(row.due_date) : ''), 'ok', { label: 'Undo', onclick: () => mDelete(row.id) });
+  };
+  inp.addEventListener('input', paint);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } if (e.key === 'Escape') { inp.value = ''; paint(); inp.blur(); } });
+  addBtn.addEventListener('click', add);
+  moreBtn.addEventListener('click', () => { const p = parsed(); inp.value = ''; paint(); openMissionSheet(null, p); });
+  paint();
+  return h('div', { class: 'm-qa' },
+    h('div', { class: 'm-qa-row' }, h('span', { class: 'emo m-qa-emo', 'aria-hidden': 'true' }, '🎯'), inp, h('div', { class: 'm-qa-btns' }, moreBtn, addBtn)),
+    preview,
+    h('div', { class: 'm-qa-help' }, 'Tip: add a day (today, tomorrow, fri, 12 nov, in 3 days), a time (5pm), a tag (#uni #work #personal #health #money #home) and ! for high priority.',
+      h('span', { class: 'k' }, ' Press ', h('kbd', null, 'N'), ' to jump here.')));
+}
+
+function missionRow(m) {
+  const done = m.status === 'done';
+  const steps = m.steps || [], sd = steps.filter(x => x.done).length;
+  const due = dueInfo(m), area = M_AREAS[m.area] || M_AREAS.other;
+  const row = h('div', { class: 'm-row' + (done ? ' done' : '') + (mUi.flash === m.id ? ' row-new' : ''), tabindex: '0', role: 'button', 'aria-label': 'Open ' + m.title,
+    onclick: () => openMissionSheet(m), onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); openMissionSheet(m); } } });
+  const check = h('button', { class: 'm-check pri-' + m.priority + (done ? ' on' : ''), role: 'checkbox', 'aria-checked': done, 'aria-label': (done ? 'Mark as not done: ' : 'Mark as done: ') + m.title, title: done ? 'Mark as not done' : 'Mark as done',
+    onclick: e => {
+      e.stopPropagation();
+      if (done) return completeMission(m);
+      row.classList.add('completing');
+      setTimeout(() => completeMission(m), 420);
+    } }, h('i', { 'aria-hidden': 'true' }, '✓'));
+  const stepsOpen = mUi.openSteps.has(m.id);
+  const meta = [
+    h('span', { class: 'm-area' }, h('i', { style: { background: area[2] } }), area[1]),
+    steps.length ? h('button', { class: 'm-steps-chip' + (sd === steps.length ? ' all' : ''), 'aria-expanded': stepsOpen, title: 'Show steps',
+      onclick: e => { e.stopPropagation(); stepsOpen ? mUi.openSteps.delete(m.id) : mUi.openSteps.add(m.id); renderMissions({ quiet: true }); } }, '☑ ' + sd + '/' + steps.length) : null,
+    m.repeat ? h('span', { title: M_REPEAT[m.repeat] }, '↻ ' + M_REPEAT[m.repeat].replace('Every ', '')) : null,
+    m.notes ? h('span', { title: 'Has notes' }, '📝') : null,
+    done && m.done_at ? h('span', null, 'Done ' + dayPhrase(doneDay(m)).replace(/^on /, '')) : null,
+  ];
+  row.append(check,
+    h('div', { class: 'm-main' },
+      h('div', { class: 'm-title' }, m.status === 'doing' ? h('span', { class: 'chip accent sm' }, '⚡ In progress') : null, m.priority === 1 && !done ? h('span', { class: 'm-flag', title: 'High priority' }, '🔴') : null, h('span', null, m.title)),
+      h('div', { class: 'm-meta' }, meta)),
+    due ? h('span', { class: 'chip m-due ' + due.cls, title: due.full }, due.text) : h('span'));
+  if (stepsOpen && steps.length) {
+    row.appendChild(h('div', { class: 'm-steps', onclick: e => e.stopPropagation() }, steps.map(stp =>
+      h('label', { class: 'm-step-line' + (stp.done ? ' done' : '') },
+        h('input', { type: 'checkbox', checked: stp.done || null, onchange: e => mPatch(m.id, { steps: steps.map(x => x.id === stp.id ? { ...x, done: e.target.checked } : x) }) }),
+        h('span', null, stp.text)))));
+  }
+  return row;
+}
+
+function listView() {
+  const t = todayStr(), rows = mFiltered();
+  const open = rows.filter(m => m.status !== 'done').sort(mSort);
+  const done = rows.filter(m => m.status === 'done').sort((a, b) => (b.done_at || '').localeCompare(a.done_at || ''));
+  const wrap = h('div', { class: 'm-list-wrap' });
+  if (!cache.missions.length) {
+    wrap.appendChild(h('div', { class: 'list' }, empty('🎯', 'No missions yet. Type one in the box above and press Enter.', { label: 'Add with details', onclick: () => openMissionSheet(null, mPreset()) })));
+    return wrap;
+  }
+  if (!open.length && !done.length) { wrap.appendChild(h('div', { class: 'list' }, empty('🔍', 'Nothing matches. Try another word or area.'))); return wrap; }
+  if (!open.length) wrap.appendChild(h('div', { class: 'list' }, empty('🎉', 'Nothing left to do here.')));
+  const groups = new Map(M_BUCKETS.map(([k]) => [k, []]));
+  open.forEach(m => groups.get(mBucket(m, t)).push(m));
+  const list = h('div', { class: 'list' });
+  M_BUCKETS.forEach(([k, label]) => {
+    const g = groups.get(k); if (!g.length) return;
+    const note = k === 'today' ? fmtDay(t) : k === 'tomorrow' ? fmtDay(shiftDays(t, 1)) : g.length + (g.length === 1 ? ' mission' : ' missions');
+    list.appendChild(h('div', { class: 'group-head' + (k === 'overdue' ? ' m-late' : '') }, h('span', null, label), h('span', { class: 'gtot' }, note)));
+    g.forEach(m => list.appendChild(missionRow(m)));
+  });
+  if (open.length) wrap.appendChild(list);
+
+  if (done.length) {
+    const shownDone = done.slice(0, mUi.doneLimit);
+    wrap.appendChild(h('section', { class: 'section' },
+      h('div', { class: 'section-head' },
+        h('button', { class: 'm-done-toggle', 'aria-expanded': mUi.showDone, onclick: () => { mUi.showDone = !mUi.showDone; save('ledger.mShowDone', mUi.showDone); renderMissions({ quiet: true }); } },
+          h('span', { class: 'section-title' }, '✅ Done'), h('span', { class: 'm-count' }, String(done.length)), h('span', { class: 'm-caret' + (mUi.showDone ? ' open' : '') }, '›')),
+        mUi.showDone ? h('button', { class: 'btn btn-ghost sm', onclick: clearDone }, 'Clear all done') : null),
+      mUi.showDone ? h('div', { class: 'list' }, shownDone.map(missionRow),
+        done.length > shownDone.length ? h('button', { class: 'more-btn', onclick: () => { mUi.doneLimit += 30; renderMissions({ quiet: true }); } }, 'Show ' + Math.min(30, done.length - shownDone.length) + ' more') : null) : null));
+  }
+  return wrap;
+}
+
+function boardView() {
+  const t = todayStr(), rows = mFiltered();
+  const cutoff = shiftDays(t, -14);
+  const board = h('div', { class: 'm-board' });
+  M_STATUS.forEach(([status, label]) => {
+    let items = rows.filter(m => m.status === status);
+    let hiddenDone = 0;
+    if (status === 'done') {
+      items.sort((a, b) => (b.done_at || '').localeCompare(a.done_at || ''));
+      const recent = items.filter(m => (doneDay(m) || t) >= cutoff); hiddenDone = items.length - recent.length; items = recent;
+    } else items.sort(mSort);
+    const col = h('div', { class: 'm-col', dataset: { status } },
+      h('div', { class: 'm-col-head' }, h('span', null, label), h('span', { class: 'm-count' }, String(items.length))),
+      items.map(m => boardCard(m)),
+      !items.length ? h('div', { class: 'm-col-empty' }, status === 'doing' ? 'Drag something here when you start it' : status === 'done' ? 'Finished missions land here' : 'Nothing to do') : null,
+      hiddenDone ? h('div', { class: 'm-col-empty' }, hiddenDone + ' older ones are in the list view') : null,
+      status === 'todo' ? h('button', { class: 'm-col-add', onclick: () => openMissionSheet(null, mPreset()) }, '+ Add a mission') : null);
+    col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drop'); });
+    col.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) col.classList.remove('drop'); });
+    col.addEventListener('drop', e => {
+      e.preventDefault(); col.classList.remove('drop');
+      const m = cache.missions.find(x => x.id === e.dataTransfer.getData('text/plain'));
+      if (m) setMissionStatus(m, status);
+    });
+    board.appendChild(col);
+  });
+  return h('div', null, board, h('div', { class: 'foot-note' }, finePointer() ? 'Drag cards between columns, or use the button on each card.' : 'Swipe sideways to see each column. Use the button on a card to move it along.'));
+}
+function boardCard(m) {
+  const due = dueInfo(m), area = M_AREAS[m.area] || M_AREAS.other, steps = m.steps || [], sd = steps.filter(x => x.done).length;
+  const next = m.status === 'todo' ? ['doing', '▶ Start'] : m.status === 'doing' ? ['done', '✓ Done'] : ['todo', '↺ Reopen'];
+  const card = h('div', { class: 'm-card pri-' + m.priority + (mUi.flash === m.id ? ' row-new' : ''), draggable: 'true', tabindex: '0', role: 'button', 'aria-label': 'Open ' + m.title,
+    onclick: () => openMissionSheet(m), onkeydown: e => { if (e.key === 'Enter' && e.target === card) openMissionSheet(m); } },
+    h('div', { class: 'm-card-title' }, m.priority === 1 && m.status !== 'done' ? h('span', { class: 'm-flag' }, '🔴') : null, m.title),
+    steps.length ? h('div', { class: 'm-bar sm' }, h('i', { style: { width: (sd / steps.length * 100) + '%' } })) : null,
+    h('div', { class: 'm-card-foot' },
+      h('span', { class: 'm-area' }, h('i', { style: { background: area[2] } }), area[1]),
+      steps.length ? h('span', { class: 'm-meta-txt' }, '☑ ' + sd + '/' + steps.length) : null,
+      due ? h('span', { class: 'chip sm ' + due.cls, title: due.full }, due.text) : null,
+      h('button', { class: 'm-move', onclick: e => { e.stopPropagation(); setMissionStatus(m, next[0]); } }, next[1])));
+  card.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', m.id); e.dataTransfer.effectAllowed = 'move'; card.classList.add('dragging'); });
+  card.addEventListener('dragend', () => card.classList.remove('dragging'));
+  return card;
+}
+
+function calendarView() {
+  const t = todayStr(), ym = mUi.month, mb = monthBounds(ym), rows = mFiltered();
+  const byDay = new Map();
+  rows.forEach(m => { if (m.due_date) { if (!byDay.has(m.due_date)) byDay.set(m.due_date, []); byDay.get(m.due_date).push(m); } });
+  byDay.forEach(v => v.sort(mSort));
+  const grid = h('div', { class: 'm-cal' }, WEEKDAYS.map(d => h('div', { class: 'heat-dow' }, d)));
+  let d = startOfWeek(mb.first);
+  const end = shiftDays(startOfWeek(mb.last), 6);
+  while (d <= end) {
+    const day = d, items = byDay.get(day) || [], open = items.filter(m => m.status !== 'done');
+    const late = day < t && open.length;
+    const cell = h('button', { type: 'button', class: 'm-day' + (day.slice(0, 7) !== ym ? ' out' : '') + (day === t ? ' today' : '') + (day === mUi.day ? ' sel' : '') + (late ? ' late' : ''),
+      'aria-label': fmtDay(day) + (items.length ? ', ' + items.length + ' missions' : ''), 'aria-pressed': day === mUi.day,
+      onclick: () => { mUi.day = day; if (day.slice(0, 7) !== mUi.month) mUi.month = day.slice(0, 7); renderMissions({ quiet: true }); } },
+      h('span', { class: 'm-dnum' }, String(Number(day.slice(8)))),
+      items.length ? h('span', { class: 'm-dots', 'aria-hidden': 'true' }, items.slice(0, 4).map(m => h('i', { class: m.status === 'done' ? 'done' : '', style: { background: (M_AREAS[m.area] || M_AREAS.other)[2] } }))) : null,
+      items.length ? h('span', { class: 'm-dtitles', 'aria-hidden': 'true' }, items.slice(0, 3).map(m => h('span', { class: 'm-dt' + (m.status === 'done' ? ' done' : ''), style: { borderColor: (M_AREAS[m.area] || M_AREAS.other)[2] } }, m.title)),
+        items.length > 3 ? h('span', { class: 'm-dmore' }, '+' + (items.length - 3) + ' more') : null) : null);
+    grid.appendChild(cell);
+    d = shiftDays(d, 1);
+  }
+  const sel = (byDay.get(mUi.day) || []);
+  const noDate = rows.filter(m => !m.due_date && m.status !== 'done').length;
+  return h('div', { class: 'grid-2' },
+    h('div', { class: 'panel' },
+      h('div', { class: 'month-nav' },
+        h('div', { class: 't' }, monthLabel(ym)),
+        h('div', { class: 'btns' },
+          ym !== t.slice(0, 7) ? h('button', { class: 'btn btn-soft sm', onclick: () => { mUi.month = t.slice(0, 7); mUi.day = t; renderMissions({ quiet: true }); } }, 'Today') : null,
+          h('button', { class: 'nav-btn', 'aria-label': 'Previous month', onclick: () => { mUi.month = addMonths(mUi.month, -1); renderMissions({ quiet: true }); } }, '‹'),
+          h('button', { class: 'nav-btn', 'aria-label': 'Next month', onclick: () => { mUi.month = addMonths(mUi.month, 1); renderMissions({ quiet: true }); } }, '›'))),
+      grid,
+      noDate ? h('div', { class: 'foot-note' }, noDate + (noDate === 1 ? ' open mission has' : ' open missions have') + ' no date, so they only show in the list.') : null),
+    h('div', null,
+      h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, mDayTitle(mUi.day)), h('div', { class: 'section-note' }, fmtDate(mUi.day))),
+        h('button', { class: 'btn btn-soft sm', onclick: () => openMissionSheet(null, { ...mPreset(), due_date: mUi.day }) }, '+ Add for this day')),
+      h('div', { class: 'list' }, sel.length ? sel.map(missionRow) : empty('🗓️', 'Nothing due on this day.'))));
+}
+
+/* ── add or edit a mission ── */
+function openMissionSheet(existing, preset = {}) {
+  const m = existing
+    ? { ...existing, steps: (existing.steps || []).map(x => ({ ...x })) }
+    : { title: '', notes: '', area: 'personal', priority: 2, status: 'todo', due_date: null, due_time: null, repeat: null, steps: [], ...preset };
+  const title = h('input', { class: 'input m-title-input', type: 'text', maxlength: 200, value: m.title || '', placeholder: 'What do you need to do?', enterkeyhint: 'done' });
+  const notes = h('textarea', { class: 'textarea', maxlength: 4000, value: m.notes || '', placeholder: 'Links, details, who to email' });
+  const date = input({ type: 'date', value: m.due_date || '' });
+  const time = input({ type: 'time', value: fmtTime(m.due_time) });
+
+  const areaGrid = h('div', { class: 'pill-grid' });
+  const paintArea = () => { clear(areaGrid); Object.entries(M_AREAS).forEach(([k, [e, l]]) => areaGrid.appendChild(h('button', { type: 'button', class: 'pill' + (m.area === k ? ' on' : ''), onclick: () => { m.area = k; paintArea(); } }, h('span', { class: 'emo', 'aria-hidden': 'true' }, e), l))); };
+  const dateGrid = h('div', { class: 'pill-grid' });
+  const paintDates = () => { clear(dateGrid); quickDates().forEach(([v, l]) => dateGrid.appendChild(h('button', { type: 'button', class: 'pill' + ((date.value || '') === v ? ' on' : ''), onclick: () => { date.value = v; if (!v) time.value = ''; paintDates(); } }, l))); };
+  date.addEventListener('change', paintDates);
+  const repGrid = h('div', { class: 'pill-grid' });
+  const paintRep = () => { clear(repGrid); [['', 'No repeat'], ...Object.entries(M_REPEAT)].forEach(([v, l]) => repGrid.appendChild(h('button', { type: 'button', class: 'pill' + ((m.repeat || '') === v ? ' on' : ''), onclick: () => { m.repeat = v || null; paintRep(); } }, v ? '↻ ' + l : l))); };
+
+  /* steps */
+  const stepsBox = h('div', { class: 'm-steps-edit' });
+  const newStep = input({ type: 'text', maxlength: 200, placeholder: '+ Add a step, then press Enter', enterkeyhint: 'enter' });
+  const paintSteps = () => {
+    clear(stepsBox);
+    m.steps.forEach((stp, i) => {
+      const txt = h('input', { class: 'm-step-input' + (stp.done ? ' done' : ''), type: 'text', value: stp.text, maxlength: 200, 'aria-label': 'Step ' + (i + 1) });
+      txt.addEventListener('input', () => { stp.text = txt.value; });
+      txt.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); newStep.focus(); } });
+      stepsBox.appendChild(h('div', { class: 'm-step-edit' },
+        h('input', { type: 'checkbox', checked: stp.done || null, 'aria-label': 'Step done', onchange: e => { stp.done = e.target.checked; paintSteps(); } }),
+        txt,
+        i > 0 ? h('button', { type: 'button', class: 'icon-btn plain', 'aria-label': 'Move up', title: 'Move up', onclick: () => { [m.steps[i - 1], m.steps[i]] = [m.steps[i], m.steps[i - 1]]; paintSteps(); } }, '↑') : h('span'),
+        h('button', { type: 'button', class: 'icon-btn', 'aria-label': 'Remove step', onclick: () => { m.steps.splice(i, 1); paintSteps(); } }, '✕')));
+    });
+    stepsLabel.textContent = m.steps.length ? 'Steps, ' + m.steps.filter(x => x.done).length + ' of ' + m.steps.length + ' done' : 'Steps';
+  };
+  const stepsLabel = h('span', { class: 'field-label' }, 'Steps');
+  newStep.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const v = newStep.value.trim(); if (!v) return;
+    m.steps.push({ id: uid(), text: v, done: false }); newStep.value = ''; paintSteps();
+  });
+  paintArea(); paintDates(); paintRep(); paintSteps();
+
+  const saveBtn = h('button', { class: 'btn btn-primary block' }, existing ? 'Save changes' : 'Add mission');
+  const doSave = async () => {
+    const tt = title.value.trim();
+    if (!tt) return shake(title);
+    const leftover = newStep.value.trim();
+    if (leftover) m.steps.push({ id: uid(), text: leftover, done: false });
+    let due_date = date.value || null;
+    if (m.repeat && !due_date) due_date = todayStr();
+    const fields = { title: tt, notes: notes.value.trim() || null, area: m.area, priority: m.priority, status: m.status,
+      due_date, due_time: due_date && time.value ? time.value : null, repeat: m.repeat || null, steps: m.steps.filter(x => x.text.trim()) };
+    saveBtn.disabled = true;
+    if (existing) {
+      const becameDone = fields.status === 'done' && existing.status !== 'done';
+      const { status, ...rest } = fields;
+      const ok = await mPatch(existing.id, becameDone ? rest : { ...rest, status, done_at: status === 'done' ? existing.done_at : null });
+      saveBtn.disabled = false;
+      if (!ok) return;
+      closeSheet();
+      if (becameDone) completeMission(cache.missions.find(x => x.id === existing.id)); else toast('Saved');
+    } else {
+      const id = uid(); mUi.flash = id;
+      const made = await mInsert([{ ...fields, id, done_at: fields.status === 'done' ? new Date().toISOString() : null }]);
+      saveBtn.disabled = false;
+      if (!made) return;
+      closeSheet(); toast('Mission added');
+    }
+  };
+  saveBtn.addEventListener('click', doSave);
+  title.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); doSave(); } });
+
+  const body = h('div', { onkeydown: e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); doSave(); } } },
+    field('Mission', title),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Area'), areaGrid),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Priority'),
+      seg([['1', '🔴 High'], ['2', 'Normal'], ['3', 'Low']], String(m.priority), v => { m.priority = Number(v); }, { full: true })),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Deadline'), dateGrid),
+    h('div', { class: 'field-row' }, field('Date', date), field('Time, if any', time)),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Repeat'), repGrid),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Status'),
+      seg(M_STATUS.map(([k, l]) => [k, l]), m.status, v => { m.status = v; }, { full: true, cls: 'm-status-seg' })),
+    h('div', { class: 'field' }, stepsLabel, stepsBox, newStep),
+    field('Notes', notes),
+    existing ? h('div', { class: 'm-sheet-tools' },
+      h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => downloadIcs({ ...existing, title: title.value.trim() || existing.title, due_date: date.value || null, due_time: time.value || null, repeat: m.repeat, steps: m.steps, notes: notes.value }) }, '📅 Add to calendar'),
+      h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => { closeSheet(true); openMissionSheet(null, { ...m, title: (title.value.trim() || m.title) + ' (copy)', status: 'todo', steps: m.steps.map(x => ({ ...x, id: uid(), done: false })), id: undefined, done_at: null, created_at: undefined }); } }, '⧉ Duplicate'),
+      h('button', { type: 'button', class: 'btn btn-ghost sm m-del', onclick: () => { closeSheet(); deleteMission(existing); } }, '🗑 Delete')) : null,
+    existing ? h('div', { class: 'hint', style: { marginTop: '12px' } }, 'Added ' + fmtDate((existing.created_at || new Date().toISOString()).slice(0, 10)) + (existing.done_at ? '. Finished ' + fmtDate(doneDay(existing)) + '.' : '.') + ' Ctrl and Enter saves.') : null);
+  openSheet(existing ? 'Edit mission' : 'New mission', body, { onOpen: () => title.focus(), footer: saveBtn });
+}
+
+function copySetupSql() {
+  const done = () => toast('SQL copied. Paste it in Supabase, SQL Editor');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(MISSIONS_SQL).then(done, () => openMissionSetupSheet());
+  else openMissionSetupSheet();
+}
+function openMissionSetupSheet() {
+  const pre = h('pre', { class: 'm-sql' }, MISSIONS_SQL);
+  openSheet('Sync missions', h('div', null,
+    h('ol', { class: 'm-steps-howto' },
+      h('li', null, 'Open your project on supabase.com.'),
+      h('li', null, 'Go to SQL Editor and click New query.'),
+      h('li', null, 'Paste the text below and press Run.'),
+      h('li', null, 'Come back here and tap Check again.')),
+    pre,
+    h('div', { class: 'hint box', style: { marginTop: '12px' } }, 'This makes one new table called missions. Only your account can read or change its rows, the same as your expenses. Nothing else is touched.')),
+    { footer: h('div', { class: 'foot-row' },
+      h('button', { class: 'btn btn-ghost', onclick: copySetupSql }, 'Copy SQL'),
+      h('button', { class: 'btn btn-primary', onclick: async e => {
+        e.currentTarget.disabled = true; await loadMissions(); closeSheet();
+        if (mStore === 'db') toast('Sync is on'); else toast('Still no missions table. Run the SQL, then try again', 'error');
+        missionsChanged();
+      } }, 'Check again')) });
+}
+
+/* N jumps to the quick add, / to search, on the Missions page */
+document.addEventListener('keydown', e => {
+  if (ui.view !== 'missions' || openSheetEl || e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = document.activeElement?.tagName;
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag)) return;
+  if (e.key === 'n' || e.key === 'N') { e.preventDefault(); $('mQuick')?.focus(); }
+  else if (e.key === '/') { e.preventDefault(); $('mSearch')?.focus(); }
+});
 
 /* ══════════════════════════ SHEETS ══════════════════════════ */
 function openEntrySheet() {
