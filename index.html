@@ -659,6 +659,12 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .m-check i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-2); display: grid; place-items: center; font-style: normal; font-size: 12px; font-weight: 900; color: transparent; transition: background-color .15s, border-color .15s, color .15s, transform .2s var(--ease); }
 .m-check.pri-1 i { border-color: var(--red); background: var(--red-soft); }
 .m-check.pri-3 i { border-style: dashed; }
+.m-check.rep i { color: var(--muted); font-size: 14px; border-color: var(--accent); }
+.m-check.rep i::before { content: '↻'; }
+.m-check.rep:hover i::before, .m-row.completing .m-check.rep i::before { content: '✓'; }
+.m-check.rep:hover i { color: var(--green); border-color: var(--green); }
+.m-row.completing .m-check.rep i { color: #fff; }
+.m-rep { white-space: nowrap; }
 .m-check:hover i { color: var(--muted); border-color: var(--green); }
 .m-check.on i, .m-row.completing .m-check i { background: var(--green); border-color: var(--green); color: #fff; }
 .m-row.completing .m-check i { animation: tick .42s var(--ease); }
@@ -1089,15 +1095,16 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', paintThe
 
 /* ══════════════════════════ toast + tooltip ══════════════════════════ */
 let toastTimer;
-/* action: optional { label, onclick }, for example an Undo button */
+/* action: optional { label, onclick } or a list of them, for example an Undo button */
 function toast(msg, kind = 'ok', action = null) {
   const t = $('toast');
+  const acts = action ? [].concat(action) : [];
   clear(t);
   t.appendChild(h('span', null, msg));
-  if (action) t.appendChild(h('button', { class: 'toast-act', onclick: () => { t.className = 'toast'; clearTimeout(toastTimer); action.onclick(); } }, action.label));
-  t.className = 'toast show' + (kind === 'error' ? ' error' : '') + (action ? ' has-act' : '');
+  acts.forEach(a => t.appendChild(h('button', { class: 'toast-act', onclick: () => { t.className = 'toast'; clearTimeout(toastTimer); a.onclick(); } }, a.label)));
+  t.className = 'toast show' + (kind === 'error' ? ' error' : '') + (acts.length ? ' has-act' : '');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.className = 'toast'; }, action ? 5500 : kind === 'error' ? 4200 : 2400);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, acts.length > 1 ? 7500 : acts.length ? 5500 : kind === 'error' ? 4200 : 2400);
 }
 const tipEl = $('tip');
 let tipOwner = null;
@@ -2796,21 +2803,26 @@ async function setMissionStatus(m, status) {
   await mPatch(m.id, { status, done_at: null });
   if (was === 'done') toast('Back on your list');
 }
-async function completeMission(m) {
+/* A one off mission moves to Done.
+   A repeating mission stays as one row: ticking it marks this time as done and moves its date
+   to the next time. It never goes to Done unless you finish it for good. */
+const REPEAT_NOW = { daily: 'today', weekly: 'this week', monthly: 'this month' };
+async function completeMission(m, { forGood = false } = {}) {
   if (m.status === 'done') return setMissionStatus(m, 'todo');
-  const prev = m.status;
-  let next = null;
-  if (m.repeat && m.due_date) {
-    next = { title: m.title, notes: m.notes, area: m.area, priority: m.priority, repeat: m.repeat, due_time: m.due_time,
-      due_date: nextDue(m.due_date, m.repeat), steps: (m.steps || []).map(st => ({ ...st, id: uid(), done: false })), status: 'todo' };
+  const before = { status: m.status, done_at: m.done_at || null, due_date: m.due_date, repeat: m.repeat || null, steps: (m.steps || []).map(x => ({ ...x })) };
+  const undo = { label: 'Undo', onclick: () => mPatch(m.id, before) };
+  if (m.repeat && m.due_date && !forGood) {
+    const next = nextDue(m.due_date, m.repeat);
+    mUi.flash = m.id;
+    const ok = await mPatch(m.id, { due_date: next, status: 'todo', done_at: new Date().toISOString(), steps: before.steps.map(x => ({ ...x, done: false })) });
+    if (!ok) return;
+    return toast('Done for ' + (before.due_date <= todayStr() ? REPEAT_NOW[m.repeat] : 'this time') + '. Next time is ' + dayPhrase(next), 'ok', [undo,
+      { label: 'Finish for good', onclick: async () => { await mPatch(m.id, before); finishForGood(cache.missions.find(x => x.id === m.id)); } }]);
   }
-  const ok = await mPatch(m.id, { status: 'done', done_at: new Date().toISOString() });
-  if (!ok) return;
-  const made = next ? await mInsert([next]) : null;
-  toast(made ? 'Done. The next one is due ' + dayPhrase(made[0].due_date) : 'Done. Nice work 🎉', 'ok', {
-    label: 'Undo', onclick: async () => { await mPatch(m.id, { status: prev, done_at: null }); if (made) await mDelete(made[0].id); },
-  });
+  const ok = await mPatch(m.id, { status: 'done', done_at: new Date().toISOString(), repeat: null });
+  if (ok) toast(before.repeat ? 'Finished for good. It will not repeat again 🎉' : 'Done. Nice work 🎉', 'ok', undo);
 }
+const finishForGood = m => m && completeMission(m, { forGood: true });
 async function deleteMission(m) {
   const copy = { ...m };
   const gone = await mDelete(m.id);
@@ -2987,19 +2999,22 @@ function missionRow(m) {
   const due = dueInfo(m), area = M_AREAS[m.area] || M_AREAS.other;
   const row = h('div', { class: 'm-row' + (done ? ' done' : '') + (mUi.flash === m.id ? ' row-new' : ''), tabindex: '0', role: 'button', 'aria-label': 'Open ' + m.title,
     onclick: () => openMissionSheet(m), onkeydown: e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === row) { e.preventDefault(); openMissionSheet(m); } } });
-  const check = h('button', { class: 'm-check pri-' + m.priority + (done ? ' on' : ''), role: 'checkbox', 'aria-checked': done, 'aria-label': (done ? 'Mark as not done: ' : 'Mark as done: ') + m.title, title: done ? 'Mark as not done' : 'Mark as done',
+  const rep = m.repeat && m.due_date && !done;
+  const tip = done ? 'Mark as not done' : rep ? 'Done for ' + (m.due_date <= todayStr() ? REPEAT_NOW[m.repeat] : 'this time') + '. It moves to ' + dayPhrase(nextDue(m.due_date, m.repeat)) : 'Mark as done';
+  const check = h('button', { class: 'm-check pri-' + m.priority + (done ? ' on' : '') + (rep ? ' rep' : ''), role: 'checkbox', 'aria-checked': done, 'aria-label': tip + ': ' + m.title, title: tip,
     onclick: e => {
       e.stopPropagation();
-      if (done) return completeMission(m);
+      if (done || rep) return completeMission(m);
       row.classList.add('completing');
       setTimeout(() => completeMission(m), 420);
-    } }, h('i', { 'aria-hidden': 'true' }, '✓'));
+    } }, h('i', { 'aria-hidden': 'true' }, rep ? '' : '✓'));
   const stepsOpen = mUi.openSteps.has(m.id);
   const meta = [
     h('span', { class: 'm-area' }, h('i', { style: { background: area[2] } }), area[1]),
     steps.length ? h('button', { class: 'm-steps-chip' + (sd === steps.length ? ' all' : ''), 'aria-expanded': stepsOpen, title: 'Show steps',
       onclick: e => { e.stopPropagation(); stepsOpen ? mUi.openSteps.delete(m.id) : mUi.openSteps.add(m.id); renderMissions({ quiet: true }); } }, '☑ ' + sd + '/' + steps.length) : null,
-    m.repeat ? h('span', { title: M_REPEAT[m.repeat] }, '↻ ' + M_REPEAT[m.repeat].replace('Every ', '')) : null,
+    m.repeat ? h('span', { class: 'm-rep', title: M_REPEAT[m.repeat] }, '↻ ' + M_REPEAT[m.repeat].toLowerCase()) : null,
+    rep && m.done_at ? h('span', null, 'Last done ' + dayPhrase(doneDay(m)).replace(/^on /, '')) : null,
     m.notes ? h('span', { title: 'Has notes' }, '📝') : null,
     done && m.done_at ? h('span', null, 'Done ' + dayPhrase(doneDay(m)).replace(/^on /, '')) : null,
   ];
@@ -3198,7 +3213,7 @@ function openMissionSheet(existing, preset = {}) {
       saveBtn.disabled = false;
       if (!ok) return;
       closeSheet();
-      if (becameDone) completeMission(cache.missions.find(x => x.id === existing.id)); else toast('Saved');
+      if (becameDone) finishForGood(cache.missions.find(x => x.id === existing.id)); else toast('Saved');
     } else {
       const id = uid(); mUi.flash = id;
       const made = await mInsert([{ ...fields, id, done_at: fields.status === 'done' ? new Date().toISOString() : null }]);
@@ -3217,7 +3232,8 @@ function openMissionSheet(existing, preset = {}) {
       seg([['1', '🔴 High'], ['2', 'Normal'], ['3', 'Low']], String(m.priority), v => { m.priority = Number(v); }, { full: true })),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Deadline'), dateGrid),
     h('div', { class: 'field-row' }, field('Date', date), field('Time, if any', time)),
-    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Repeat'), repGrid),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Repeat'), repGrid,
+      h('div', { class: 'hint', style: { marginTop: '8px' } }, 'A repeating mission stays on your list. Ticking it marks this time as done and moves it to the next date. Set Status to Done to finish it for good.')),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Status'),
       seg(M_STATUS.map(([k, l]) => [k, l]), m.status, v => { m.status = v; }, { full: true, cls: 'm-status-seg' })),
     h('div', { class: 'field' }, stepsLabel, stepsBox, newStep),
@@ -3226,7 +3242,7 @@ function openMissionSheet(existing, preset = {}) {
       h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => downloadIcs({ ...existing, title: title.value.trim() || existing.title, due_date: date.value || null, due_time: time.value || null, repeat: m.repeat, steps: m.steps, notes: notes.value }) }, '📅 Add to calendar'),
       h('button', { type: 'button', class: 'btn btn-ghost sm', onclick: () => { closeSheet(true); openMissionSheet(null, { ...m, title: (title.value.trim() || m.title) + ' (copy)', status: 'todo', steps: m.steps.map(x => ({ ...x, id: uid(), done: false })), id: undefined, done_at: null, created_at: undefined }); } }, '⧉ Duplicate'),
       h('button', { type: 'button', class: 'btn btn-ghost sm m-del', onclick: () => { closeSheet(); deleteMission(existing); } }, '🗑 Delete')) : null,
-    existing ? h('div', { class: 'hint', style: { marginTop: '12px' } }, 'Added ' + fmtDate((existing.created_at || new Date().toISOString()).slice(0, 10)) + (existing.done_at ? '. Finished ' + fmtDate(doneDay(existing)) + '.' : '.') + ' Ctrl and Enter saves.') : null);
+    existing ? h('div', { class: 'hint', style: { marginTop: '12px' } }, 'Added ' + fmtDate((existing.created_at || new Date().toISOString()).slice(0, 10)) + (existing.done_at ? (existing.status === 'done' ? '. Finished ' : '. Last done ') + fmtDate(doneDay(existing)) + '.' : '.') + ' Ctrl and Enter saves.') : null);
   openSheet(existing ? 'Edit mission' : 'New mission', body, { onOpen: () => title.focus(), footer: saveBtn });
 }
 
