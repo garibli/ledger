@@ -611,6 +611,15 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .foot-note { font-size: 13px; color: var(--muted); font-weight: 600; margin-top: 10px; line-height: 1.55; }
 .more-btn { display: block; width: 100%; padding: 13px; background: var(--surface-2); border: 0; border-top: 1px solid var(--line); font-weight: 800; color: var(--accent-ink); font-size: 14px; }
 
+/* trades filter */
+.tr-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.tr-filter { flex: 1 1 260px; min-width: 0; }
+.tr-filter .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tr-sum { margin-bottom: 14px; }
+.tr-sum .foot-note { margin-top: 8px; }
+.tick-link { border: 0; background: none; padding: 0; font: inherit; color: inherit; cursor: pointer; text-decoration: underline dotted var(--line-2); text-underline-offset: 4px; }
+.tick-link:hover { color: var(--accent-ink); text-decoration-color: currentColor; }
+
 /* nav badge */
 .nav-badge { min-width: 19px; height: 19px; padding: 0 5px; border-radius: 999px; background: var(--gold); color: #1c1400; font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; line-height: 1; }
 .nav-badge.late { background: var(--red); color: #fff; }
@@ -865,7 +874,7 @@ let range = load('ledger.range', { kind: 'month', from: null, to: null });
 let anMode = load('ledger.anMode', 'spend');   // Analysis shows spending or income
 const ui = {
   view: initialView(), day: todayStr(), month: todayStr().slice(0, 7),
-  showAllTrades: false, goldStamp: '', flashKey: null,
+  showAllTrades: false, tradeTicker: 'all', tradeSide: 'all', goldStamp: '', flashKey: null,
 };
 const animateNext = new Set(Object.keys(VIEWS));
 
@@ -1976,16 +1985,12 @@ function renderInvest() {
       const realised = -x.netUsd;
       return h('div', { class: 'row no-del' },
         h('div', { class: 'bubble emo', 'aria-hidden': 'true' }, '🏁'),
-        h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, x.ticker), h('div', { class: 'row-sub' }, 'Profit or loss after fees')),
+        h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, h('button', { class: 'tick-link', title: 'See every ' + x.ticker + ' trade', onclick: () => filterTrades(x.ticker) }, x.ticker)), h('div', { class: 'row-sub' }, 'Profit or loss after fees')),
         h('div', { class: 'amt' }, h('span', { class: 'chip ' + (realised >= 0 ? 'good' : 'bad') }, signedShown(realised, 'USD'))));
     }))));
   }
 
-  const trades = ui.showAllTrades ? cache.trades : cache.trades.slice(0, 6);
-  const tradeList = h('div', { class: 'list' }, trades.map(tradeRow),
-    cache.trades.length > 6 ? h('button', { class: 'more-btn', onclick: () => { ui.showAllTrades = !ui.showAllTrades; renderInvest(); } },
-      ui.showAllTrades ? 'Show fewer' : 'Show all ' + cache.trades.length + ' trades') : null);
-  root.appendChild(section('Trades', null, tradeList));
+  root.appendChild(tradesSection());
 
   const owned = cache.thesis.filter(x => x.status === 'owned'), watching = cache.thesis.filter(x => x.status === 'watching');
   const noteBtn = h('button', { class: 'btn btn-ghost sm', onclick: () => openThesisSheet() }, '+ Add note');
@@ -1995,6 +2000,83 @@ function renderInvest() {
   ] : h('div', { class: 'list' }, empty('📝', 'Write down why you bought each fund. It helps when the price drops.'));
   root.appendChild(sectionWith('Notes and earnings dates', null, noteBtn, thesisBody));
 }
+/* trades, with a filter by ticker and by buy or sell */
+function filterTrades(ticker) {
+  ui.tradeTicker = ticker; ui.tradeSide = 'all'; ui.showAllTrades = false;
+  renderInvest();
+  requestAnimationFrame(() => $('tradesSec')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }));
+}
+function tradesSection() {
+  const all = cache.trades;
+  const tickers = tickerOrder().filter(tk => all.some(t => t.ticker === tk));
+  if (ui.tradeTicker !== 'all' && !tickers.includes(ui.tradeTicker)) ui.tradeTicker = 'all';
+  const byTicker = ui.tradeTicker === 'all' ? all : all.filter(t => t.ticker === ui.tradeTicker);
+  const hasSells = byTicker.some(t => t.side === 'Sell');
+  if (!hasSells) ui.tradeSide = 'all';
+  const rows = ui.tradeSide === 'all' ? byTicker : byTicker.filter(t => t.side === ui.tradeSide);
+  const filtered = ui.tradeTicker !== 'all' || ui.tradeSide !== 'all';
+  const rerender = () => { ui.showAllTrades = false; renderInvest(); };
+
+  const count = tk => all.filter(t => t.ticker === tk).length;
+  const bar = tickers.length > 1 ? h('div', { class: 'scroller tr-filter', role: 'radiogroup', 'aria-label': 'Filter trades by ticker' },
+    h('button', { class: 'pill' + (ui.tradeTicker === 'all' ? ' on' : ''), role: 'radio', 'aria-checked': ui.tradeTicker === 'all',
+      onclick: () => { ui.tradeTicker = 'all'; rerender(); } }, 'All', h('span', { class: 'm-count' }, String(all.length))),
+    tickers.map(tk => h('button', { class: 'pill' + (ui.tradeTicker === tk ? ' on' : ''), role: 'radio', 'aria-checked': ui.tradeTicker === tk,
+      onclick: () => { ui.tradeTicker = ui.tradeTicker === tk ? 'all' : tk; rerender(); } },
+      h('i', { class: 'dot', style: { background: tickerColor(tk) } }), tk, h('span', { class: 'm-count' }, String(count(tk)))))) : null;
+  const sideSeg = hasSells ? seg([['all', 'All'], ['Buy', 'Buys'], ['Sell', 'Sells']], ui.tradeSide, v => { ui.tradeSide = v; rerender(); }) : null;
+
+  const list = h('div', { class: 'list' });
+  if (!all.length) list.appendChild(empty('📈', 'No trades yet.'));
+  else if (!rows.length) list.appendChild(empty('🔍', 'No ' + (ui.tradeSide === 'Sell' ? 'sells' : 'buys') + ' for ' + ui.tradeTicker + '.'));
+  else {
+    const shownRows = ui.showAllTrades ? rows : rows.slice(0, filtered ? 12 : 6);
+    if (filtered) {
+      /* group by month so you can see when you bought */
+      let lastMonth = null;
+      shownRows.forEach(t => {
+        const ym = String(t.trade_date).slice(0, 7);
+        if (ym !== lastMonth) {
+          lastMonth = ym;
+          const inMonth = rows.filter(x => String(x.trade_date).slice(0, 7) === ym);
+          list.appendChild(h('div', { class: 'group-head' }, h('span', null, monthLabel(ym)), h('span', { class: 'gtot' }, inMonth.length + (inMonth.length === 1 ? ' trade' : ' trades'))));
+        }
+        list.appendChild(tradeRow(t));
+      });
+    } else shownRows.forEach(t => list.appendChild(tradeRow(t)));
+    if (rows.length > shownRows.length || ui.showAllTrades && rows.length > (filtered ? 12 : 6))
+      list.appendChild(h('button', { class: 'more-btn', onclick: () => { ui.showAllTrades = !ui.showAllTrades; renderInvest(); } },
+        ui.showAllTrades ? 'Show fewer' : 'Show all ' + rows.length + ' trades'));
+  }
+
+  const sec = sectionWith('Trades', filtered ? rows.length + ' of ' + all.length + ' trades' : null,
+    filtered ? h('button', { class: 'btn btn-ghost sm', onclick: () => { ui.tradeTicker = 'all'; ui.tradeSide = 'all'; rerender(); } }, 'Clear filter') : null,
+    bar || sideSeg ? h('div', { class: 'tr-tools' }, bar, sideSeg) : null,
+    ui.tradeTicker !== 'all' ? tickerSummary(ui.tradeTicker, byTicker) : null,
+    list);
+  sec.id = 'tradesSec';
+  return sec;
+}
+/* a short story for one ticker: how much you bought, at what average, first and last time */
+function tickerSummary(tk, rows) {
+  const buys = rows.filter(t => t.side !== 'Sell'), sells = rows.filter(t => t.side === 'Sell');
+  const sum = (arr, f) => arr.reduce((a, t) => a + f(t), 0);
+  const boughtQty = sum(buys, t => num(t.quantity)), soldQty = sum(sells, t => num(t.quantity));
+  const spent = sum(buys, t => tradeMath(t).total), got = sum(sells, t => -tradeMath(t).total);
+  const avg = boughtQty ? sum(buys, t => num(t.quantity) * num(t.price_per_share)) / boughtQty : 0;
+  const fees = sum(rows, t => tradeMath(t).comm);
+  const dates = rows.map(t => String(t.trade_date)).sort();
+  const span = dates.length > 1 ? 'From ' + fmtDate(dates[0]) + ' to ' + fmtDate(dates[dates.length - 1]) : 'On ' + fmtDate(dates[0]);
+  const held = boughtQty - soldQty;
+  return h('div', { class: 'tr-sum' },
+    h('div', { class: 'stats four' },
+      stat('Bought', qty(boughtQty) + (boughtQty === 1 ? ' share' : ' shares'), buys.length + (buys.length === 1 ? ' buy' : ' buys') + ', ' + money(spent, 'USD') + ' with fees'),
+      stat('Average buy price', money(avg, 'USD'), 'per share, before fees'),
+      sells.length ? stat('Sold', qty(soldQty) + (soldQty === 1 ? ' share' : ' shares'), sells.length + (sells.length === 1 ? ' sell' : ' sells') + ', ' + money(got, 'USD') + ' after fees')
+        : stat('Still holding', qty(held) + (held === 1 ? ' share' : ' shares'), 'never sold'),
+      stat('Fees paid', money(fees, 'USD'), rows.length + (rows.length === 1 ? ' trade' : ' trades'))),
+    h('div', { class: 'foot-note' }, span + '.' + (sells.length ? (held > 1e-9 ? ' You still hold ' + qty(held) + (held === 1 ? ' share.' : ' shares.') : ' You sold all of it.') : '')));
+}
 function holdingRow(x, total) {
   const color = tickerColor(x.ticker);
   const inp = h('input', { class: 'px-input', type: 'text', inputmode: 'decimal', value: x.price !== null ? String(x.price) : '', placeholder: '0.00', 'aria-label': 'Current price of ' + x.ticker });
@@ -2003,7 +2085,8 @@ function holdingRow(x, total) {
     : h('span', { class: 'chip ' + (x.gain >= 0 ? 'good' : 'bad') }, signedShown(x.gain, 'USD'));
   const gp = x.gain === null || !x.netUsd ? '—' : pct(x.gain / x.netUsd * 100);
   return h('div', { class: 'hold-row' },
-    h('div', { class: 'h-tick' }, h('i', { class: 'dot', style: { background: color } }), x.ticker),
+    h('div', { class: 'h-tick' }, h('i', { class: 'dot', style: { background: color } }),
+      h('button', { class: 'tick-link', title: 'See every ' + x.ticker + ' trade', onclick: () => filterTrades(x.ticker) }, x.ticker)),
     h('div', { class: 'h-meta' }, qty(x.shares) + (num(x.shares) === 1 ? ' share' : ' shares') + ', average ' + money(x.avg, 'USD')),
     h('div', { class: 'h-shares' }, qty(x.shares)),
     h('div', { class: 'h-netin' }, fmtShown(x.netUsd, 'USD')),
