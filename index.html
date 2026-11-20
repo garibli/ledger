@@ -218,6 +218,25 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .btn .plus { font-size: 20px; line-height: 1; margin-top: -2px; }
 
 .page-action { box-shadow: var(--shadow-soft); }
+.page-actions { display: flex; align-items: center; gap: 10px; flex: none; }
+.report-btn { gap: 7px; }
+.report-btn .rb-short { display: none; }
+@media (max-width: 400px) { .report-btn .rb-long { display: none; } .report-btn .rb-short { display: inline; } }
+
+/* report sheet */
+.rp-cards { display: grid; gap: 10px; }
+.rp-card { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px; border-radius: 16px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--ink); transition: border-color .15s, background-color .15s; }
+.rp-card:hover:not(:disabled) { border-color: var(--line-2); }
+.rp-card.on { border-color: var(--accent); background: var(--accent-soft); }
+.rp-card:disabled { opacity: .5; cursor: not-allowed; }
+.rp-tick { flex: none; width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line-2); display: grid; place-items: center; font-size: 13px; font-weight: 900; color: transparent; transition: background-color .15s, border-color .15s; }
+.rp-card.on .rp-tick { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.rp-emo { font-size: 24px; flex: none; }
+.rp-text { display: flex; flex-direction: column; min-width: 0; }
+.rp-text b { font-size: 15.5px; }
+.rp-text small { font-size: 13px; color: var(--muted); font-weight: 600; }
+.rp-check { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; color: var(--ink-2); padding: 6px 2px; cursor: pointer; }
+.rp-check input { width: 19px; height: 19px; accent-color: var(--accent); flex: none; }
 @media (max-width: 959px) {
   .page-action {
     position: fixed; z-index: 25; right: 16px;
@@ -1509,13 +1528,16 @@ function countUp(el) {
 }
 
 /* ══════════════════════════ small components ══════════════════════════ */
-function pageHead(view, action) {
+function pageHead(view, action, extra = null) {
   const v = VIEWS[view];
   return h('div', { class: 'page-head' },
     h('h1', { class: 'page-title' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, v.emoji), v.title),
-    action ? h('button', { class: 'btn btn-primary page-action', onclick: action.onclick },
-      h('span', { class: 'plus', 'aria-hidden': 'true' }, '+'), action.label) : null);
+    h('div', { class: 'page-actions' }, extra,
+      action ? h('button', { class: 'btn btn-primary page-action', onclick: action.onclick },
+        h('span', { class: 'plus', 'aria-hidden': 'true' }, '+'), action.label) : null));
 }
+const reportBtn = from => h('button', { class: 'btn btn-ghost sm report-btn', title: 'Make a PDF of your investments and gold', onclick: () => openReportSheet(from) },
+  h('span', { class: 'emo', 'aria-hidden': 'true' }, '📄'), h('span', { class: 'rb-long' }, 'Generate document'), h('span', { class: 'rb-short' }, 'PDF'));
 function section(title, note, ...body) {
   return h('section', { class: 'section' },
     h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, title), note ? h('div', { class: 'section-note' }, note) : null)),
@@ -1934,7 +1956,7 @@ function currencyBlock(rows, cur) {
 /* ══════════════════════════ INVESTMENTS ══════════════════════════ */
 function renderInvest() {
   const root = beginView('invest');
-  root.appendChild(pageHead('invest', { label: 'Add trade', onclick: () => openTradeSheet() }));
+  root.appendChild(pageHead('invest', { label: 'Add trade', onclick: () => openTradeSheet() }, cache.trades.length || cache.gold.length ? reportBtn('invest') : null));
   root.appendChild(currencyBar());
 
   const totalWith = cache.trades.reduce((a, t) => a + tradeMath(t).total, 0);
@@ -2127,7 +2149,7 @@ function thesisCard(x) {
 /* ══════════════════════════ GOLD ══════════════════════════ */
 function renderGold() {
   const root = beginView('gold');
-  root.appendChild(pageHead('gold', { label: 'Add gold', onclick: () => openGoldSheet() }));
+  root.appendChild(pageHead('gold', { label: 'Add gold', onclick: () => openGoldSheet() }, cache.trades.length || cache.gold.length ? reportBtn('gold') : null));
   root.appendChild(currencyBar());
   const items = cache.gold;
   const gross = items.reduce((a, i) => a + num(i.grams), 0);
@@ -3363,6 +3385,422 @@ document.addEventListener('keydown', e => {
   if (e.key === 'n' || e.key === 'N') { e.preventDefault(); $('mQuick')?.focus(); }
   else if (e.key === '/') { e.preventDefault(); $('mSearch')?.focus(); }
 });
+
+/* ══════════════════════════ REPORT (PDF) ══════════════════════════ */
+/* Builds a PDF of your investments and gold right here in the browser and downloads it.
+   Nothing is sent anywhere. The PDF library and the Manrope font load from jsDelivr
+   the first time, then the app keeps a copy. */
+const PDF_LIBS = [
+  'https://cdn.jsdelivr.net/npm/jspdf@3.0.4/dist/jspdf.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/jspdf-autotable@5.0.2/dist/jspdf.plugin.autotable.min.js',
+];
+const PDF_FONTS = {
+  normal: 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/manrope@0.4.3/400Regular/Manrope_400Regular.ttf',
+  bold: 'https://cdn.jsdelivr.net/npm/@expo-google-fonts/manrope@0.4.3/700Bold/Manrope_700Bold.ttf',
+};
+let pdfReady = null;
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector('script[data-src="' + src + '"]')) return res();
+    const s = document.createElement('script');
+    s.src = src; s.async = false; s.dataset.src = src; s.crossOrigin = 'anonymous';
+    s.onload = () => res(); s.onerror = () => { s.remove(); rej(new Error('Could not load ' + src.split('/npm/')[1])); };
+    document.head.appendChild(s);
+  });
+}
+async function fontB64(url) {
+  const buf = await (await fetch(url)).arrayBuffer();
+  let bin = ''; const bytes = new Uint8Array(buf);
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function loadPdfLibs() {
+  if (!pdfReady) {
+    pdfReady = (async () => {
+      for (const src of PDF_LIBS) await loadScript(src);
+      let fonts = null;
+      try { fonts = { normal: await fontB64(PDF_FONTS.normal), bold: await fontB64(PDF_FONTS.bold) }; }
+      catch (e) { console.warn('Report font did not load', e); fonts = null; }   // the built in font still works, it just lacks ə, ş, ğ
+      return { jsPDF: window.jspdf.jsPDF, fonts };
+    })();
+    pdfReady.catch(() => { pdfReady = null; });
+  }
+  return pdfReady;
+}
+
+/* colours on paper, matching the app */
+const P = {
+  ink: [15, 23, 42], ink2: [51, 65, 85], muted: [100, 116, 139], line: [226, 232, 240], soft: [241, 245, 249],
+  band: [11, 18, 36], accent: [14, 165, 233], green: [5, 150, 105], red: [220, 38, 38], gold: [183, 121, 31], goldSoft: [254, 243, 199],
+  series: [[42, 120, 214], [235, 104, 52], [27, 175, 122], [237, 161, 0], [232, 123, 164], [0, 131, 0], [98, 80, 214], [227, 73, 72]],
+};
+
+function openReportSheet(from) {
+  loadPdfLibs().catch(() => {});             // start loading while you choose
+  const hasInv = cache.trades.length > 0, hasGold = cache.gold.length > 0;
+  const pick = { invest: from === 'invest' ? true : hasInv, gold: from === 'gold' ? true : hasGold, csv: false };
+  let cur = ratesReady() ? base() : 'USD';
+  const card = (key, emoji, title, sub, ok) => {
+    const b = h('button', { type: 'button', class: 'rp-card' + (pick[key] ? ' on' : ''), role: 'checkbox', 'aria-checked': pick[key], disabled: !ok || null,
+      onclick: () => { pick[key] = !pick[key]; b.classList.toggle('on', pick[key]); b.setAttribute('aria-checked', pick[key]); paint(); } },
+      h('span', { class: 'rp-tick', 'aria-hidden': 'true' }, '✓'),
+      h('span', { class: 'emo rp-emo', 'aria-hidden': 'true' }, emoji),
+      h('span', { class: 'rp-text' }, h('b', null, title), h('small', null, ok ? sub : 'Nothing recorded yet')));
+    return b;
+  };
+  const nTrades = cache.trades.length, nGold = cache.gold.length;
+  const cards = from === 'gold'
+    ? [card('gold', '💍', 'Gold', nGold + (nGold === 1 ? ' piece' : ' pieces') + ', value today, what you paid', hasGold),
+       card('invest', '📈', 'Investments', nTrades + ' trades, holdings, commission', hasInv)]
+    : [card('invest', '📈', 'Investments', nTrades + ' trades, holdings, value, commission', hasInv),
+       card('gold', '💍', 'Gold', nGold + (nGold === 1 ? ' piece' : ' pieces') + ', value today, what you paid', hasGold)];
+  if (!hasInv) pick.invest = false;
+  if (!hasGold) pick.gold = false;
+
+  const csvBox = h('label', { class: 'rp-check' },
+    h('input', { type: 'checkbox', onchange: e => { pick.csv = e.target.checked; } }),
+    h('span', null, 'Also download all trades as a spreadsheet (CSV) for Excel'));
+  const stale = [];
+  if (pick.invest || hasInv) {
+    const { open } = buildHoldings();
+    const missing = open.filter(x => x.price === null).map(x => x.ticker);
+    if (missing.length) stale.push('No price yet for ' + missing.join(', ') + '. Their value is left out.');
+    if (cache.priceStamp) stale.push('Share prices from ' + new Date(cache.priceStamp).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.');
+  }
+  if (hasGold && trGold?.at) stale.push('Gold prices from ' + new Date(trGold.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.');
+
+  const goBtn = h('button', { class: 'btn btn-primary block' }, '📄 Download PDF');
+  const paint = () => { goBtn.disabled = !(pick.invest || pick.gold) || null; csvBox.hidden = !hasInv; };
+  goBtn.addEventListener('click', () => makeReport({ ...pick, cur, first: from }, goBtn));
+
+  openSheet('Generate document', h('div', null,
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'What to put in it'), h('div', { class: 'rp-cards' }, cards)),
+    ratesReady() ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Totals in'),
+      seg([['GBP', '£ Pounds'], ['AZN', '₼ Manat'], ['USD', '$ Dollars']], cur, v => { cur = v; }, { full: true }),
+      h('div', { class: 'hint', style: { marginTop: '8px' } }, 'Trades stay in dollars, as your broker shows them. Totals are also shown in the currency you pick.')) : null,
+    csvBox,
+    h('div', { class: 'hint box', style: { marginTop: '14px' } },
+      'The PDF uses the prices you see in the app right now. ' + (stale.length ? stale.join(' ') + ' ' : '') + 'Refresh prices first if you want the newest numbers.')),
+    { footer: goBtn });
+  paint();
+}
+
+async function makeReport(opt, btn) {
+  const stamp = new Date().toLocaleDateString('en-CA');
+  const name = 'Ledger report ' + stamp + '.pdf';
+  /* on a computer you choose where it goes, starting on the Desktop. The save window has to open first, while your click still counts. */
+  let handle = null;
+  if (window.showSaveFilePicker && finePointer()) {
+    try {
+      handle = await window.showSaveFilePicker({ suggestedName: name, startIn: 'desktop', types: [{ description: 'PDF document', accept: { 'application/pdf': ['.pdf'] } }] });
+    } catch (e) {
+      if (e?.name === 'AbortError') return;    // you closed the save window
+      handle = null;                            // not allowed here, fall back to a normal download
+    }
+  }
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Building your PDF…';
+  try {
+    const { jsPDF, fonts } = await loadPdfLibs();
+    const blob = buildReport(jsPDF, fonts, opt);
+    if (handle) { const w = await handle.createWritable(); await w.write(blob); await w.close(); }
+    else saveBlob(blob, name);
+    if (opt.csv && cache.trades.length) saveBlob(new Blob(['﻿' + tradesCsv()], { type: 'text/csv;charset=utf-8' }), 'Ledger trades ' + stamp + '.csv');
+    closeSheet();
+    toast(handle ? 'Saved ' + handle.name : 'PDF downloaded' + (opt.csv ? ' with the CSV' : '') + '. Check your Downloads folder');
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false; btn.textContent = label;
+    toast('Could not make the PDF: ' + (e?.message || 'unknown error') + '. Check your internet and try again', 'error');
+  }
+}
+function saveBlob(blob, filename) {
+  const a = h('a', { href: URL.createObjectURL(blob), download: filename });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+function tradesCsv() {
+  const cell = v => { const s = v === null || v === undefined ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const head = ['Date', 'Time', 'Side', 'Ticker', 'Shares', 'Price per share (USD)', 'Shares cost (USD)', 'Commission (USD)', 'Total (USD)', 'USD to AZN rate', 'Total (AZN)', 'Platform'];
+  const rows = [...cache.trades].sort(tradeAsc).map(t => {
+    const m = tradeMath(t), sell = t.side === 'Sell';
+    return [t.trade_date, t.trade_time ? String(t.trade_time).slice(0, 5) : '', t.side, t.ticker, num(t.quantity), num(t.price_per_share),
+      m.cost.toFixed(2), m.comm.toFixed(2), (sell ? -m.total : m.total).toFixed(2), t.fx_rate ? num(t.fx_rate) : '', m.azn !== null ? (sell ? -m.azn : m.azn).toFixed(2) : '', t.platform || ''];
+  });
+  return [head, ...rows].map(r => r.map(cell).join(',')).join('\r\n');
+}
+const tradeAsc = (a, b) => (String(a.trade_date) + (a.trade_time || '') + (a.created_at || '')).localeCompare(String(b.trade_date) + (b.trade_time || '') + (b.created_at || ''));
+
+/* ── the document itself ── */
+function buildReport(jsPDF, fonts, opt) {
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const F = fonts ? 'Manrope' : 'helvetica';
+  if (fonts) {
+    doc.addFileToVFS('Manrope-Regular.ttf', fonts.normal); doc.addFont('Manrope-Regular.ttf', 'Manrope', 'normal');
+    doc.addFileToVFS('Manrope-Bold.ttf', fonts.bold); doc.addFont('Manrope-Bold.ttf', 'Manrope', 'bold');
+  }
+  /* text the font can draw: manat has no sign in Manrope, so it is written as AZN */
+  const clean = s => {
+    let t = String(s ?? '').replace(/\p{Extended_Pictographic}|️|‍/gu, '').replace(/Ə/g, 'E');
+    if (!fonts) t = t.replace(/[əƏ]/g, 'e').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g').replace(/₺/g, 'TL ').replace(/−/g, '-');
+    return t.trim();
+  };
+  const W = 210, M = 14, CW = W - M * 2, BOTTOM = 284;
+  const fmtN = (v, dp = 2) => Math.abs(num(v)).toLocaleString('en-GB', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  const pm = (v, cur, dp = 2) => {
+    const sign = num(v) < 0 ? '−' : '';
+    if (cur === 'AZN') return sign + fmtN(v, dp) + ' AZN';
+    if (cur === 'TRY') return sign + '₺' + fmtN(v, dp);
+    return sign + (SYM[cur] || '') + fmtN(v, dp);
+  };
+  const ps = (v, cur) => (num(v) >= 0 ? '+' : '') + pm(v, cur);
+  const pp = v => (num(v) >= 0 ? '+' : '−') + Math.abs(num(v)).toFixed(1) + '%';
+  const canConv = ratesReady();
+  const cur = canConv ? opt.cur : 'USD';
+  const inCur = (v, from) => { if (!canConv && from !== cur) return null; const x = conv(v, from, cur); return Number.isFinite(x) ? x : null; };
+  const dual = (v, from) => { const x = from === cur ? null : inCur(v, from); return x === null ? pm(v, from) : pm(v, from) + '  (' + pm(x, cur) + ')'; };
+  const fd = s => s ? dateOf(String(s).slice(0, 10)).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const now = new Date();
+  const nowTxt = now.toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  let y = 0;
+
+  const setF = (size, style = 'normal', color = P.ink) => { doc.setFont(F, style); doc.setFontSize(size); doc.setTextColor(...color); };
+  const need = h => { if (y + h > BOTTOM) { doc.addPage(); y = 18; } };
+  const T = (txt, x, yy, o) => doc.text(clean(txt), x, yy, o);
+
+  /* cover band */
+  doc.setFillColor(...P.band); doc.rect(0, 0, W, 40, 'F');
+  doc.setFillColor(...P.accent); doc.rect(0, 40, W, 1.2, 'F');
+  setF(24, 'bold', [255, 255, 255]); T('Ledger', M, 18);
+  const parts = [opt.invest && 'Investments', opt.gold && 'Gold'].filter(Boolean);
+  if (opt.first === 'gold') parts.reverse();
+  setF(12, 'normal', [186, 230, 253]); T(parts.join(' and ') + ' report', M, 27);
+  setF(9, 'normal', [148, 163, 184]); T('Made ' + nowTxt, W - M, 17, { align: 'right' });
+  if (user?.email) T(user.email, W - M, 23, { align: 'right' });
+  if (canConv) T('Totals in ' + CUR_NAME[cur].toLowerCase(), W - M, 29, { align: 'right' });
+  y = 52;
+
+  const heading = (title, note) => {
+    need(note ? 22 : 16);
+    setF(15, 'bold'); T(title, M, y);
+    doc.setDrawColor(...P.accent); doc.setLineWidth(0.8); doc.line(M, y + 2.5, M + 14, y + 2.5);
+    y += 8;
+    if (note) { setF(9, 'normal', P.muted); const lines = doc.splitTextToSize(clean(note), CW); doc.text(lines, M, y); y += lines.length * 4 + 2; }
+  };
+  const sub = title => { need(30); setF(11, 'bold', P.ink2); T(title, M, y); y += 4; };   // keep a heading with the first rows under it
+  /* a row of number cards */
+  const cards = (list, cols = 3) => {
+    const gap = 4, cw = (CW - gap * (cols - 1)) / cols, ch = 23;
+    for (let i = 0; i < list.length; i += cols) {
+      need(ch + gap);
+      list.slice(i, i + cols).forEach((c, j) => {
+        const x = M + j * (cw + gap);
+        doc.setFillColor(...(c.fill || P.soft)); doc.roundedRect(x, y, cw, ch, 2.5, 2.5, 'F');
+        setF(8, 'bold', P.muted); T(c.label.toUpperCase(), x + 4, y + 6.5);
+        setF(c.value.length > 16 ? 11 : 13.5, 'bold', c.color || P.ink); T(c.value, x + 4, y + 14);
+        if (c.note) { setF(7.5, 'normal', P.muted); T(doc.splitTextToSize(clean(c.note), cw - 8)[0], x + 4, y + 19.5); }
+      });
+      y += ch + gap;
+    }
+    y += 2;
+  };
+  const table = (head, body, o = {}) => {
+    need(20);
+    doc.autoTable({
+      head: [head], body, foot: o.foot ? [o.foot] : undefined, startY: y, margin: { left: M, right: M, top: 18, bottom: 16 },
+      theme: 'plain', showFoot: 'lastPage',
+      styles: { font: F, fontSize: o.size || 8.5, textColor: P.ink, cellPadding: { top: 2.2, bottom: 2.2, left: 2, right: 2 }, lineColor: P.line, overflow: 'linebreak' },
+      headStyles: { font: F, fontStyle: 'bold', fontSize: 7.5, textColor: P.muted, fillColor: P.soft },
+      footStyles: { font: F, fontStyle: 'bold', fillColor: P.soft, textColor: P.ink },
+      bodyStyles: { lineWidth: { bottom: 0.2 } },
+      columnStyles: o.cols || {},
+      didParseCell: d => {
+        if (typeof d.cell.raw === 'string') d.cell.text = clean(d.cell.raw).split('\n');
+        if (d.section === 'body' && o.paint) o.paint(d);
+      },
+      didDrawCell: o.draw,
+    });
+    y = doc.lastAutoTable.finalY + 8;
+  };
+  const right = idx => Object.fromEntries(idx.map(i => [i, { halign: 'right' }]));
+  const tone = (d, col, v) => { if (d.column.index === col && v !== null && v !== undefined) d.cell.styles.textColor = v >= 0 ? P.green : P.red; };
+
+  const invest = () => {
+    const trades = [...cache.trades].sort(tradeAsc);
+    const { open, closed } = buildHoldings();
+    const priced = open.filter(x => x.value !== null);
+    const value = priced.reduce((a, x) => a + x.value, 0), basis = priced.reduce((a, x) => a + x.netUsd, 0), gain = value - basis;
+    const totalWith = trades.reduce((a, t) => a + tradeMath(t).total, 0);
+    const comm = trades.reduce((a, t) => a + num(t.commission), 0);
+    const bought = trades.filter(t => t.side !== 'Sell'), sold = trades.filter(t => t.side === 'Sell');
+    const spentBuys = bought.reduce((a, t) => a + tradeMath(t).total, 0), gotSells = sold.reduce((a, t) => a - tradeMath(t).total, 0);
+    const azn = trades.reduce((a, t) => a + (tradeMath(t).azn || 0), 0);
+    const realised = closed.reduce((a, x) => a - x.netUsd, 0);
+    const missing = open.filter(x => x.price === null).map(x => x.ticker);
+
+    heading('Investments', 'All amounts in US dollars, as your broker shows them' + (cur !== 'USD' ? ', with ' + CUR_NAME[cur].toLowerCase() + ' in brackets at your rates' : '') + '. ' +
+      (trades.length ? trades.length + ' trades from ' + fd(trades[0].trade_date) + ' to ' + fd(trades[trades.length - 1].trade_date) + '.' : ''));
+    cards([
+      { label: 'Portfolio value', value: priced.length ? pm(value, 'USD') : 'No prices', note: priced.length && cur !== 'USD' && inCur(value, 'USD') !== null ? pm(inCur(value, 'USD'), cur) + (missing.length ? ', without ' + missing.join(', ') : '') : missing.length ? 'without ' + missing.join(', ') : 'at the prices in the app' },
+      { label: 'Gain or loss now', value: priced.length ? ps(gain, 'USD') : '—', color: gain >= 0 ? P.green : P.red, note: priced.length ? pp(basis ? gain / basis * 100 : 0) + ' on what you hold, after fees' : '' },
+      { label: 'Invested in total', value: pm(totalWith, 'USD'), note: 'buys minus sells, with commission' },
+      { label: 'Spent on buys', value: pm(spentBuys, 'USD'), note: bought.length + ' buys, with commission' },
+      { label: 'Got from sells', value: pm(gotSells, 'USD'), note: sold.length ? sold.length + (sold.length === 1 ? ' sell, after commission' : ' sells, after commission') : 'nothing sold yet' },
+      { label: 'Commission paid', value: pm(comm, 'USD'), note: (totalWith - comm) > 0 ? (comm / (totalWith - comm) * 100).toFixed(2) + '% of what you put in' : '' },
+      { label: 'Spent in manat', value: pm(azn, 'AZN'), note: 'at the rate on each trade day' },
+      { label: 'Realised profit or loss', value: closed.length ? ps(realised, 'USD') : '—', color: closed.length ? (realised >= 0 ? P.green : P.red) : P.ink, note: closed.length ? 'on stocks you sold completely' : 'nothing sold completely' },
+      { label: 'Holdings', value: String(open.length), note: open.length === 1 ? 'stock or fund you own now' : 'stocks and funds you own now' },
+    ]);
+
+    if (open.length) {
+      sub('What you own now');
+      table(['Ticker', 'Shares', 'Avg cost', 'Put in', 'Price now', 'Value', 'Gain', 'Gain %', 'Share'],
+        open.map(x => [x.ticker, qty(x.shares), pm(x.avg, 'USD'), pm(x.netUsd, 'USD'), x.price !== null ? pm(x.price, 'USD') : 'no price',
+          x.value !== null ? pm(x.value, 'USD') : '—', x.gain !== null ? ps(x.gain, 'USD') : '—', x.gain !== null && x.netUsd ? pp(x.gain / x.netUsd * 100) : '—',
+          x.value !== null && value ? (x.value / value * 100).toFixed(1) + '%' : '—']),
+        { cols: { 0: { fontStyle: 'bold' }, ...right([1, 2, 3, 4, 5, 6, 7, 8]) },
+          foot: ['Total', '', '', pm(basis, 'USD'), '', pm(value, 'USD'), ps(gain, 'USD'), basis ? pp(gain / basis * 100) : '', '100%'],
+          paint: d => { const x = open[d.row.index]; tone(d, 6, x.gain); tone(d, 7, x.gain); } });
+      /* a bar showing how it is split */
+      if (priced.length > 1 && value > 0) {
+        need(16);
+        setF(8, 'bold', P.muted); T('HOW IT IS SPLIT', M, y); y += 3;
+        let x = M;
+        priced.forEach((p, i) => { const w = p.value / value * CW; doc.setFillColor(...P.series[i % P.series.length]); doc.rect(x, y, Math.max(w, 0.4), 5, 'F'); x += w; });
+        y += 9; x = M;
+        setF(8, 'normal', P.ink2);
+        priced.forEach((p, i) => {
+          const t = clean(p.ticker + ' ' + (p.value / value * 100).toFixed(1) + '%'), w = doc.getTextWidth(t) + 9;
+          if (x + w > M + CW) { x = M; y += 5; }
+          doc.setFillColor(...P.series[i % P.series.length]); doc.circle(x + 1.5, y - 1.1, 1.3, 'F');
+          doc.text(t, x + 4, y); x += w;
+        });
+        y += 9;
+      }
+    }
+
+    if (closed.length) {
+      sub('Sold completely');
+      table(['Ticker', 'Profit or loss after fees'], closed.map(x => [x.ticker, ps(-x.netUsd, 'USD')]),
+        { cols: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' } }, paint: d => tone(d, 1, -closed[d.row.index].netUsd) });
+    }
+
+    /* each stock on one line */
+    const tickers = [...new Set(trades.map(t => t.ticker))].sort((a, b) => a.localeCompare(b));
+    sub('Each stock, all time');
+    table(['Ticker', 'Buys', 'Shares bought', 'Avg buy price', 'Sells', 'Shares sold', 'Commission', 'First trade', 'Last trade'],
+      tickers.map(tk => {
+        const rows = trades.filter(t => t.ticker === tk), b = rows.filter(t => t.side !== 'Sell'), s = rows.filter(t => t.side === 'Sell');
+        const bq = b.reduce((a, t) => a + num(t.quantity), 0), sq = s.reduce((a, t) => a + num(t.quantity), 0);
+        const avg = bq ? b.reduce((a, t) => a + num(t.quantity) * num(t.price_per_share), 0) / bq : 0;
+        return [tk, String(b.length), qty(bq), bq ? pm(avg, 'USD') : '—', String(s.length), s.length ? qty(sq) : '—',
+          pm(rows.reduce((a, t) => a + num(t.commission), 0), 'USD'), fd(rows[0].trade_date), fd(rows[rows.length - 1].trade_date)];
+      }), { cols: { 0: { fontStyle: 'bold' }, ...right([1, 2, 3, 4, 5, 6]) } });
+
+    /* every trade, oldest first */
+    sub('Every buy and sell');
+    table(['Date', 'Side', 'Ticker', 'Shares', 'Price', 'Cost', 'Commission', 'Total', 'Rate', 'In manat', 'Where'],
+      trades.map(t => {
+        const m = tradeMath(t), sell = t.side === 'Sell';
+        return [fd(t.trade_date) + (t.trade_time ? ', ' + String(t.trade_time).slice(0, 5) : ''), t.side, t.ticker, qty(t.quantity), pm(t.price_per_share, 'USD'),
+          pm(m.cost, 'USD'), pm(m.comm, 'USD'), (sell ? '+' : '') + pm(Math.abs(m.total), 'USD'), t.fx_rate ? String(num(t.fx_rate)) : '', m.azn !== null ? pm(Math.abs(m.azn), 'AZN') : '', t.platform || ''];
+      }),
+      { size: 7.5, cols: { 0: { cellWidth: 30 }, 2: { fontStyle: 'bold' }, ...right([3, 4, 5, 6, 7, 8, 9]) },
+        foot: ['Totals', '', '', '', '', pm(trades.reduce((a, t) => a + tradeMath(t).cost * (t.side === 'Sell' ? -1 : 1), 0), 'USD'), pm(comm, 'USD'), pm(totalWith, 'USD'), '', pm(azn, 'AZN'), ''],
+        paint: d => { if (d.column.index === 1) { const sell = trades[d.row.index].side === 'Sell'; d.cell.styles.textColor = sell ? P.red : P.green; d.cell.styles.fontStyle = 'bold'; } } });
+    need(10);
+    setF(8, 'normal', P.muted);
+    doc.text(doc.splitTextToSize(clean('Cost is shares times price. Total adds the commission on a buy and takes it off on a sell. A + means money came back to you. In manat uses the rate you saved on that trade.'), CW), M, y);
+    y += 12;
+
+    /* notes */
+    if (cache.thesis.length) {
+      sub('Your notes');
+      table(['Ticker', 'Status', 'Why', 'Would sell if', 'Next earnings'],
+        cache.thesis.map(x => [x.ticker + (x.company ? '\n' + x.company : ''), x.status === 'owned' ? 'Own it' : 'Watching', x.why || '', x.sell_trigger || '', x.next_earnings ? fd(x.next_earnings) : '']),
+        { size: 8, cols: { 0: { cellWidth: 26, fontStyle: 'bold' }, 1: { cellWidth: 18 }, 4: { cellWidth: 24 } } });
+    }
+  };
+
+  const gold = () => {
+    const items = cache.gold;
+    const gv = goldValue();
+    const gross = items.reduce((a, i) => a + num(i.grams), 0), pure = items.reduce((a, i) => a + pureGrams(i), 0);
+    const paidBy = {};
+    items.forEach(i => { if (num(i.paid) > 0) paidBy[i.currency] = (paidBy[i.currency] || 0) + num(i.paid); });
+    const paidList = Object.entries(paidBy);
+    const paidConv = paidList.every(([c]) => inCur(1, c) !== null) ? paidList.reduce((a, [c, v]) => a + inCur(v, c), 0) : null;
+    const worthConv = gv ? inCur(gv.v, gv.cur) : null;
+    const diff = worthConv !== null && paidConv !== null && paidConv > 0 ? worthConv - paidConv : null;
+
+    heading('Gold', gv ? (gv.src === 'table' ? 'Valued at what a kuyumcu pays today for each karat (Kapalıçarşı prices from Bigpara' + (trGold?.at ? ', ' + fd(new Date(trGold.at).toLocaleDateString('en-CA')) : '') + ').' : 'Valued at the world price of pure gold, because the Turkish shop prices were missing.') + ' Gifts count as zero paid.'
+      : 'No gold price loaded, so only weights and what you paid are shown. Tap Fetch live on the Gold page first.');
+    cards([
+      { label: 'Worth today', value: gv ? pm(gv.v, gv.cur, gv.cur === 'TRY' ? 0 : 2) : '—', note: worthConv !== null && gv.cur !== cur ? pm(worthConv, cur) : gv ? 'at today\'s price' : 'no price loaded', fill: P.goldSoft },
+      { label: 'Pure gold', value: fmtN(pure, 2) + ' g', note: 'adjusted for purity', fill: P.goldSoft },
+      { label: 'On the scale', value: fmtN(gross, 2) + ' g', note: items.length + (items.length === 1 ? ' piece' : ' pieces'), fill: P.goldSoft },
+      { label: 'You paid', value: paidConv !== null ? pm(paidConv, cur) : paidList.length ? paidList.map(([c, v]) => pm(v, c)).join(' + ') : pm(0, cur), note: paidList.length > 1 || (paidList[0] && paidList[0][0] !== cur) ? paidList.map(([c, v]) => pm(v, c)).join(' + ') : 'gifts count as zero' },
+      { label: 'Worth minus paid', value: diff !== null ? ps(diff, cur) : '—', color: diff === null ? P.ink : diff >= 0 ? P.green : P.red, note: diff !== null ? pp(diff / paidConv * 100) + ' on what you paid' : 'needs a price and your rates' },
+      { label: 'Gifts', value: String(items.filter(i => i.is_gift).length), note: 'pieces you were given' },
+    ]);
+    sub('Each piece');
+    table(['Item', 'Karat', 'Weight', 'Pure gold', 'Got it', 'Paid', 'Shop pays a gram', 'Worth today'],
+      items.map(i => {
+        const v = pieceValue(i), r = shopRate(i);
+        return [i.item_name + (i.is_gift ? ' (gift)' : ''), num(i.karat) + 'K', fmtN(i.grams, 2) + ' g', fmtN(pureGrams(i), 2) + ' g', fd(i.buy_date),
+          num(i.paid) ? pm(i.paid, i.currency) : (i.is_gift ? 'gift' : '—'), r ? pm(r, 'TRY') : 'world price', v ? pm(v.v, v.cur, v.cur === 'TRY' ? 0 : 2) : '—'];
+      }),
+      { cols: { 0: { fontStyle: 'bold' }, ...right([1, 2, 3, 5, 6, 7]) },
+        foot: ['Total', '', fmtN(gross, 2) + ' g', fmtN(pure, 2) + ' g', '', paidConv !== null ? pm(paidConv, cur) : '', '', gv ? pm(gv.v, gv.cur, gv.cur === 'TRY' ? 0 : 2) : ''] });
+    if (trGold?.items) {
+      const keys = TR_GOLD_KEYS.filter(k => trGold.items[k]);
+      if (keys.length) {
+        sub('Turkish market prices used');
+        table(['Item', '', 'Shop pays', 'Shop sells'],
+          keys.map(k => [TR_NAMES[k][0], TR_NAMES[k][1], pm(trGold.items[k].buy, 'TRY', trGold.items[k].buy >= 1000 ? 0 : 2), pm(trGold.items[k].sell, 'TRY', trGold.items[k].sell >= 1000 ? 0 : 2)]),
+          { size: 8, cols: { 0: { fontStyle: 'bold' }, 1: { textColor: P.muted }, 2: { halign: 'right' }, 3: { halign: 'right' } } });
+      }
+    }
+  };
+
+  /* both together first, when both are in */
+  if (opt.invest && opt.gold && canConv) {
+    const inv = conv(portfolioUsd(), 'USD', cur), gv = goldValue(), g = gv ? conv(gv.v, gv.cur, cur) : 0;
+    const total = (Number.isFinite(inv) ? inv : 0) + (Number.isFinite(g) ? g : 0);
+    heading('Together');
+    cards([
+      { label: 'Investments and gold', value: pm(total, cur), note: 'what both are worth today' },
+      { label: 'Investments', value: pm(inv, cur), note: total ? (inv / total * 100).toFixed(0) + '% of the two' : '' },
+      { label: 'Gold', value: gv ? pm(g, cur) : '—', note: gv && total ? (g / total * 100).toFixed(0) + '% of the two' : 'no gold price loaded', fill: P.goldSoft },
+    ]);
+  }
+  const order = opt.first === 'gold' ? [opt.gold && gold, opt.invest && invest] : [opt.invest && invest, opt.gold && gold];
+  order.filter(Boolean).forEach((fn, i) => { if (i > 0) { doc.addPage(); y = 18; } fn(); });
+
+  /* how the numbers were worked out */
+  need(30);
+  heading('How these numbers were worked out');
+  const how = [];
+  if (canConv) how.push('Your rates: £1 = ' + fmtN(rates.gbpAzn, 4) + ' AZN and $1 = ' + fmtN(rates.usdAzn, 4) + ' AZN' + (rates.at ? ', live rates from ' + new Date(rates.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ', typed in by you') + '.');
+  else how.push('No exchange rates saved, so everything stays in its own currency.');
+  if (opt.invest && cache.priceStamp) how.push('Share prices last refreshed ' + new Date(cache.priceStamp).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + '.');
+  if (opt.gold && trGold?.usdTry) how.push('$1 = ₺' + fmtN(trGold.usdTry, 2) + ' when the gold prices were fetched.');
+  how.push('Made by Ledger on ' + nowTxt + '. This is your own record, not a statement from your broker.');
+  setF(9, 'normal', P.ink2);
+  how.forEach(line => { const l = doc.splitTextToSize(clean(line), CW); need(l.length * 4.5); doc.text(l, M, y); y += l.length * 4.5 + 1.5; });
+
+  /* page numbers */
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    doc.setDrawColor(...P.line); doc.setLineWidth(0.2); doc.line(M, 288, W - M, 288);
+    setF(7.5, 'normal', P.muted);
+    T('Ledger  ·  ' + parts.join(' and ') + ' report  ·  ' + now.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }), M, 292);
+    T('Page ' + i + ' of ' + pages, W - M, 292, { align: 'right' });
+  }
+  doc.setProperties({ title: 'Ledger ' + parts.join(' and ').toLowerCase() + ' report', author: user?.email || 'Ledger', creator: 'Ledger' });
+  return doc.output('blob');
+}
 
 /* ══════════════════════════ SHEETS ══════════════════════════ */
 function openEntrySheet() {
