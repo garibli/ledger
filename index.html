@@ -786,6 +786,50 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .m-sql { background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; font: 500 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; color: var(--ink-2); }
 .m-steps-howto { padding-left: 20px; margin-bottom: 12px; font-weight: 600; color: var(--ink-2); line-height: 1.8; }
 
+/* ───────────────────────── trips ───────────────────────── */
+.back-link { border: 0; background: none; padding: 4px 0; margin-bottom: 6px; color: var(--accent-ink); font-weight: 800; font-size: 14.5px; }
+.back-link:hover { text-decoration: underline; }
+.trip-banner { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; margin: 4px 0 20px; border-radius: var(--r-lg); background: var(--surface); border: 1.5px solid var(--line); }
+.trip-banner.live { border-color: var(--accent); background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%); }
+.trip-banner-main { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; color: var(--ink); }
+.trip-emo { font-size: 30px; flex: none; }
+.trip-banner-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.trip-banner-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.trip-banner-top b { font-size: 16.5px; }
+.trip-banner-line { font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.trip-bar { display: block; height: 7px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin-top: 4px; }
+.trip-bar i { display: block; height: 100%; border-radius: 999px; background: var(--green); }
+.trip-bar.over i { background: var(--red); }
+.trip-bar.big { height: 10px; margin: -6px 0 18px; max-width: 520px; }
+@media (max-width: 560px) { .trip-banner { flex-wrap: wrap; } .trip-banner > .btn { width: 100%; } }
+.trip-mini-list { display: flex; flex-direction: column; gap: 8px; }
+.trip-mini { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; border: 0; border-radius: 13px; background: var(--surface-2); text-align: left; color: var(--ink); }
+.trip-mini:hover { background: var(--surface-3); }
+.trip-mini .emo { font-size: 22px; flex: none; }
+.trip-mini-name { flex: 1; min-width: 0; font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trip-mini-name small { display: block; font-size: 12px; color: var(--muted); font-weight: 600; }
+.trip-mini-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+.trip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.trip-card { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 16px; border-radius: var(--r-lg); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); transition: border-color .15s, transform .15s var(--ease); }
+.trip-card:hover { border-color: var(--line-2); transform: translateY(-1px); }
+.trip-card.live { border-color: var(--accent); }
+.trip-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.trip-card-name { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: -.02em; }
+.trip-card-dates, .trip-card-note { font-size: 13px; color: var(--muted); font-weight: 600; }
+.trip-card-val { font-weight: 800; font-size: 22px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.trip-card-val small { font-size: 13px; color: var(--muted); }
+.trip-sub { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 14px; font-weight: 700; color: var(--ink-2); font-size: 14px; }
+.trip-notes { white-space: pre-wrap; color: var(--ink-2); font-weight: 600; line-height: 1.5; }
+.trip-del { color: var(--red); align-self: flex-start; }
+.trip-pick { margin-bottom: 4px; }
+.pill-note { font-size: 11.5px; color: var(--muted); font-weight: 700; margin-left: 2px; }
+.pill.on .pill-note { color: inherit; opacity: .8; }
+.emo-pill { min-width: 46px; justify-content: center; font-size: 18px; }
+.amount-wrap.slim .input { flex: 1; min-width: 0; }
+.amount-wrap.slim { gap: 10px; }
+.bad-text { color: var(--red); }
+.cur-box { flex: none; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
 }
@@ -839,6 +883,7 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
     <section class="view" id="view-networth" hidden></section>
     <section class="view" id="view-analysis" hidden></section>
     <section class="view" id="view-missions" hidden></section>
+    <section class="view" id="view-trips" hidden></section>
   </main>
 
   <nav class="tabbar" id="tabbar" aria-label="Main"></nav>
@@ -857,22 +902,24 @@ const db = createClient(SUPABASE_URL, SUPABASE_ANON, { auth: { persistSession: t
 
 const VIEWS = {
   expenses: { emoji: '💸', title: 'Expenses' },
+  trips:    { emoji: '🧳', title: 'Trips', tab: false },
   invest:   { emoji: '📈', title: 'Investments' },
   gold:     { emoji: '💍', title: 'Gold' },
   networth: { emoji: '🏦', title: 'Net worth' },
   analysis: { emoji: '📊', title: 'Analysis' },
   missions: { emoji: '🎯', title: 'Missions' },
 };
-const EXPENSE_CATS = ['Restaurant','Food Order','Market','Meat','Cigarettes','Transport','Shopping','Health','Entertainment','Monthly Payments','Date & Romantic','Other'];
+const EXPENSE_CATS = ['Restaurant','Food Order','Market','Meat','Cigarettes','Transport','Trip','Shopping','Health','Entertainment','Monthly Payments','Date & Romantic','Other'];
 const INCOME_CATS  = ['Scholarship','Mama','Manat','Salary','Freelance','Other'];
 const SUBCATS = { 'Transport': ['Taxi','Bus','Metro','Train','Airplane','Car Rental'] };
 const CAT_EMOJI = {
   'Restaurant':'🍽️','Food Order':'🛵','Market':'🛒','Meat':'🥩','Cigarettes':'🚬','Transport':'🚕','Shopping':'🛍️','Health':'💊',
   'Entertainment':'🎬','Monthly Payments':'🧾','Date & Romantic':'💕','Other':'📦',
   'Scholarship':'🎓','Mama':'👩','Manat':'💵','Salary':'💼','Freelance':'💻',
-  'Food & Drink':'🍔','Housing':'🏠','Utilities':'💡'
+  'Food & Drink':'🍔','Housing':'🏠','Utilities':'💡',
+  'Trip':'🧳','Hotel / Hostel':'🏨','Coffee & Snacks':'☕','Gifts & Souvenirs':'🎁','Tickets & Tours':'🎟️','SIM & Internet':'📶','Visa & Insurance':'🛂'
 };
-const SUB_EMOJI = { 'Taxi':'🚕','Bus':'🚌','Metro':'🚇','Train':'🚆','Airplane':'✈️','Car Rental':'🚗' };
+const SUB_EMOJI = { 'Taxi':'🚕','Bus':'🚌','Metro':'🚇','Train':'🚆','Airplane':'✈️','Ferry':'⛴️','Car Rental':'🚗' };
 const KARATS = [[24,'99.9%'],[22,'91.6%'],[21,'87.5%'],[18,'75%'],[14,'58.5%'],[9,'37.5%']];
 const KARAT_FINENESS = { 24: 0.999, 22: 0.916, 21: 0.875, 18: 0.750, 14: 0.585, 9: 0.375 };
 const SYM = { GBP: '£', AZN: '₼', USD: '$', TRY: '₺', EUR: '€' };
@@ -899,7 +946,7 @@ const ui = {
 };
 const animateNext = new Set(Object.keys(VIEWS));
 
-function emptyCache() { return { entries: [], trades: [], gold: [], thesis: [], prices: {}, priceStamp: null, accounts: [], snapshots: [], missions: [] }; }
+function emptyCache() { return { entries: [], trades: [], gold: [], thesis: [], prices: {}, priceStamp: null, accounts: [], snapshots: [], missions: [], trips: [] }; }
 function initialView() {
   const fromHash = (location.hash || '').slice(1);
   if (VIEWS[fromHash]) return fromHash;
@@ -1562,8 +1609,11 @@ function empty(emoji, text, action) {
     action ? h('div', null, h('button', { class: 'btn btn-soft sm', onclick: action.onclick }, action.label)) : null);
 }
 function delBtn(onclick, label = 'Delete') { return h('button', { class: 'icon-btn', 'aria-label': label, title: label, onclick }, '✕'); }
-function emojiFor(e) { return SUB_EMOJI[e.subcategory] || CAT_EMOJI[e.category] || '📦'; }
-function catLabel(e) { return e.subcategory ? e.category + ', ' + e.subcategory : e.category; }
+function emojiFor(e) {
+  if (e.category === 'Trip') return SUB_EMOJI[e.subcategory] || CAT_EMOJI[e.subcategory] || '🧳';
+  return SUB_EMOJI[e.subcategory] || CAT_EMOJI[e.category] || '📦';
+}
+function catLabel(e) { return e.category === 'Trip' ? tripLabel(e) : e.subcategory ? e.category + ', ' + e.subcategory : e.category; }
 function seg(options, value, onChange, { full = false, cls = '' } = {}) {
   const wrap = h('div', { class: 'seg' + (full ? ' full' : '') + (cls ? ' ' + cls : ''), role: 'radiogroup' });
   const render = val => wrap.querySelectorAll('button').forEach(b => { const on = b.dataset.v === val; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
@@ -1614,9 +1664,9 @@ function leaveApp() {
 function buildNav() {
   const rail = $('railNav'), bar = $('tabbar');
   Object.entries(VIEWS).forEach(([key, v]) => {
-    rail.appendChild(h('button', { class: 'rail-link', dataset: { nav: key }, onclick: () => showView(key) },
+    rail.appendChild(h('button', { class: 'rail-link', dataset: { nav: key }, onclick: () => key === 'trips' ? openTrip(null) : showView(key) },
       h('span', { class: 'emo', 'aria-hidden': 'true' }, v.emoji), v.title));
-    bar.appendChild(h('button', { class: 'tab', dataset: { nav: key }, onclick: () => showView(key) },
+    if (v.tab !== false) bar.appendChild(h('button', { class: 'tab', dataset: { nav: key }, onclick: () => showView(key) },
       h('span', { class: 'emo', 'aria-hidden': 'true' }, v.emoji), h('span', null, v.title === 'Investments' ? 'Invest' : v.title)));
   });
   $('btnThemeTop').addEventListener('click', toggleTheme);
@@ -1659,7 +1709,7 @@ function beginView(name) {
 /* ══════════════════════════ data ══════════════════════════ */
 async function refreshAll(first = false) {
   if (!user) return;
-  const missionsLoad = loadMissions();
+  const missionsLoad = loadMissions(), tripsLoad = loadTrips();
   const [e, t, g, th, p, ac, sn] = await Promise.all([
     db.from('entries').select('*').order('date', { ascending: false }).order('created_at', { ascending: false }),
     db.from('trades').select('*').order('trade_date', { ascending: false }).order('created_at', { ascending: false }),
@@ -1682,11 +1732,11 @@ async function refreshAll(first = false) {
   cache.priceStamp = stamps.length ? stamps[stamps.length - 1] : null;
   cache.accounts  = ac.data || [];
   cache.snapshots = sn.data || [];
-  await missionsLoad;
+  await missionsLoad; await tripsLoad;
   renderAll();
   if (first) playIntro(ui.view);
 }
-function renderAll() { renderExpenses(); renderInvest(); renderGold(); renderNetWorth(); renderAnalysis(); renderMissions(); paintNavBadge(); }
+function renderAll() { renderExpenses(); renderInvest(); renderGold(); renderNetWorth(); renderAnalysis(); renderMissions(); renderTrips(); paintNavBadge(); }
 
 /* ══════════════════════════ calculations ══════════════════════════ */
 function sumByCur(rows, type) {
@@ -1777,7 +1827,7 @@ function snapTotalIn(snap, b) {
 }
 
 /* ══════════════════════════ EXPENSES ══════════════════════════ */
-const ENTRY_CURS = ['GBP', 'AZN', 'USD'];
+const ENTRY_CURS = ['GBP', 'AZN', 'USD', 'TRY'];
 function renderExpenses() {
   const root = beginView('expenses');
   root.appendChild(pageHead('expenses', { label: 'Add', onclick: () => openEntrySheet() }));
@@ -1802,10 +1852,12 @@ function renderExpenses() {
   let nums, subBits = null, inBits;
   if (ready) {
     /* everything in the currency you picked, the original amounts as small chips */
-    const total = outCurs.reduce((a, c) => a + conv(out[c], c, b), 0);
-    nums = total > 0 ? countEl(total, v => money(v, b)) : h('span', { class: 'hero-num zero' }, money(0, b));
+    const okC = c => Number.isFinite(conv(1, c, b));
+    const total = outCurs.filter(okC).reduce((a, c) => a + conv(out[c], c, b), 0);
+    const stuck = outCurs.filter(c => !okC(c));
+    nums = total > 0 || !stuck.length ? countEl(total, v => money(v, b)) : stuck.map(c => countEl(out[c], v => money(v, c)));
     if (outCurs.some(c => c !== b)) subBits = [outCurs.map((c, i) => [i ? h('span', { 'aria-hidden': 'true' }, '+') : null, h('span', { class: 'chip neutral' }, money(out[c], c))]),
-      h('span', null, 'converted at your rates')];
+      h('span', null, stuck.length ? 'no rate for ' + stuck.map(c => SYM[c]).join(' ') + ' yet, tap ↻ Live rates' : 'converted at your rates')];
     const inTotal = inCurs.reduce((a, c) => a + conv(inc[c], c, b), 0);
     inBits = inTotal > 0 ? h('span', { class: 'chip good' }, signed(inTotal, b) + ' in') : null;
   } else {
@@ -1819,6 +1871,8 @@ function renderExpenses() {
     h('div', { class: 'hero-sub' }, subBits, inBits,
       h('span', null, dayRows.length ? dayRows.length + (dayRows.length === 1 ? ' entry' : ' entries') : 'Nothing logged yet'))));
 
+  const banner = tripBanner();
+  if (banner) root.appendChild(banner);
   const left = h('div');
   left.appendChild(dayRows.length
     ? h('div', { class: 'list' }, dayRows.map(e => entryRow(e)))
@@ -1859,7 +1913,7 @@ function renderExpenses() {
       v => { save('ledger.monthSplit', v === 'split'); renderExpenses(); }, { full: true })) : null,
     mRows.length ? (split ? mCurs.map(c => currencyBlock(mRows, c)) : convertedBlock(mRows, b)) : empty('🗓️', 'Nothing logged in ' + monthLabel(ym) + '.'));
 
-  root.appendChild(h('div', { class: 'grid-2' }, left, h('div', { class: 'stack-tight' }, converterPanel(), monthPanel)));
+  root.appendChild(h('div', { class: 'grid-2' }, left, h('div', { class: 'stack-tight' }, cache.trips.length ? tripsPanel() : null, converterPanel(), monthPanel, cache.trips.length ? null : tripsPanel())));
   ui.flashKey = null;
 }
 function stepDay(n) { ui.day = shiftDays(ui.day, n); ui.month = ui.day.slice(0, 7); renderExpenses(); }
@@ -1935,7 +1989,7 @@ function categoryRows(rows, valueOf) {
     map.set(k, r);
   });
   return [...map.values()].sort((a, b) => b.value - a.value).map(r => {
-    if (r.subs.size) r.sub = [...r.subs.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => (SUB_EMOJI[n] || '') + ' ' + n).join(', ');
+    if (r.subs.size) r.sub = [...r.subs.entries()].sort((a, b) => b[1] - a[1]).map(([n]) => (SUB_EMOJI[n] || CAT_EMOJI[n] || '') + ' ' + n).join(', ');
     return r;
   });
 }
@@ -3386,6 +3440,360 @@ document.addEventListener('keydown', e => {
   else if (e.key === '/') { e.preventDefault(); $('mSearch')?.focus(); }
 });
 
+/* ══════════════════════════ TRIPS ══════════════════════════ */
+/* A trip has a name, dates and an optional budget. Expenses in the Trip category belong to one.
+   Bookings made before you leave count as "before the trip". Saved in the Supabase "trips"
+   table; until that exists, trips are kept in this browser and linked by date. */
+const TRIP_SUBS = ['Hotel / Hostel', 'Transport', 'Restaurant', 'Food Order', 'Market', 'Coffee & Snacks', 'Cigarettes', 'Shopping', 'Gifts & Souvenirs',
+  'Tickets & Tours', 'Entertainment', 'Health', 'SIM & Internet', 'Visa & Insurance', 'Other'];
+const TRIP_TRANSPORT = ['Taxi', 'Bus', 'Metro', 'Train', 'Airplane', 'Ferry', 'Car Rental'];
+const TRIP_EMOJIS = ['✈️', '🏖️', '🏔️', '🏙️', '🕌', '🏰', '🚗', '🎒', '🎄', '⚽'];
+const TRIP_CURS = ['GBP', 'AZN', 'USD', 'TRY'];
+const TRIPS_SQL = `-- Ledger: trips. Run this once in Supabase, SQL Editor, New query.
+create table if not exists public.trips (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  name text not null,
+  emoji text,
+  start_date date not null,
+  end_date date not null,
+  budget numeric,
+  currency text not null default 'GBP',
+  notes text,
+  created_at timestamptz not null default now()
+);
+alter table public.trips enable row level security;
+drop policy if exists "trips are yours" on public.trips;
+create policy "trips are yours" on public.trips
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+-- lets each expense say which trip it belongs to
+alter table public.entries add column if not exists trip_id uuid references public.trips (id) on delete set null;`;
+
+let tripStore = 'db', tripErr = null;
+const tripMissing = e => ['PGRST205', '42P01', 'PGRST106'].includes(e?.code) || /trips/i.test(e?.message || '') && /(could not find|does not exist|schema cache)/i.test(e?.message || '');
+const localTrips = () => load('ledger.trips', []);
+async function loadTrips() {
+  let res;
+  try { res = await db.from('trips').select('*').order('start_date'); }
+  catch (e) { res = { error: { message: e?.message || 'network error' } }; }
+  if (res.error) {
+    if (tripMissing(res.error)) { tripStore = 'local'; tripErr = null; cache.trips = localTrips(); }
+    else { tripErr = res.error.message; if (tripStore === 'local') cache.trips = localTrips(); }
+    return;
+  }
+  tripStore = 'db'; tripErr = null;
+  cache.trips = res.data || [];
+}
+async function saveTrip(row, existing) {
+  if (tripStore === 'local') {
+    if (existing) Object.assign(cache.trips.find(t => t.id === existing.id), row);
+    else cache.trips.push({ ...row, id: uid(), created_at: new Date().toISOString() });
+    save('ledger.trips', cache.trips); return true;
+  }
+  const res = existing ? await db.from('trips').update(row).eq('id', existing.id) : await db.from('trips').insert([{ ...row, id: uid(), user_id: user.id }]);
+  if (res.error) { toast('Could not save the trip: ' + res.error.message, 'error'); return false; }
+  await loadTrips(); return true;
+}
+async function deleteTrip(t) {
+  const n = tripRows(t).length;
+  if (!confirm('Delete the trip "' + t.name + '"?' + (n ? ' Its ' + n + (n === 1 ? ' expense stays' : ' expenses stay') + ' in your ledger as Trip spending.' : ''))) return;
+  if (tripStore === 'local') { cache.trips = cache.trips.filter(x => x.id !== t.id); save('ledger.trips', cache.trips); }
+  else {
+    const { error } = await db.from('trips').delete().eq('id', t.id);
+    if (error) return toast('Could not delete: ' + error.message, 'error');
+    cache.trips = cache.trips.filter(x => x.id !== t.id);
+    cache.entries.forEach(e => { if (e.trip_id === t.id) e.trip_id = null; });
+  }
+  ui.tripId = null; toast('Trip deleted'); renderAll();
+}
+async function moveLocalTripsUp(btn) {
+  const rows = localTrips(); if (!rows.length) return;
+  btn.disabled = true; btn.textContent = 'Moving…';
+  const { error } = await db.from('trips').insert(rows.map(({ id, name, emoji, start_date, end_date, budget, currency, notes }) => ({ id, name, emoji, start_date, end_date, budget, currency, notes, user_id: user.id })));
+  if (error) { btn.disabled = false; btn.textContent = 'Try again'; return toast('Could not move them: ' + error.message, 'error'); }
+  save('ledger.trips', []); toast('Moved ' + rows.length + (rows.length === 1 ? ' trip' : ' trips') + ' to your account');
+  await loadTrips(); renderAll();
+}
+
+/* ── which trip an expense belongs to ── */
+const tripById = id => cache.trips.find(t => t.id === id) || null;
+function tripForDate(d) {
+  const ts = [...cache.trips].sort((a, b) => a.start_date.localeCompare(b.start_date));
+  return ts.find(t => d >= t.start_date && d <= t.end_date)                              // during it
+    || ts.find(t => t.start_date > d && daysBetween(d, t.start_date) <= 180) || null;   // booked before it
+}
+function tripOf(e) {
+  if (e.category !== 'Trip') return null;
+  if (e.trip_id) return tripById(e.trip_id);
+  return tripForDate(e.date);
+}
+const tripRows = t => cache.entries.filter(e => e.type === 'expense' && tripOf(e)?.id === t.id);
+const tripDays = t => daysBetween(t.start_date, t.end_date) + 1;
+function tripState(t, today = todayStr()) {
+  if (today < t.start_date) return { k: 'soon', days: daysBetween(today, t.start_date) };
+  if (today > t.end_date) return { k: 'past' };
+  return { k: 'now', day: daysBetween(t.start_date, today) + 1, left: daysBetween(today, t.end_date) + 1 };
+}
+const activeTrip = () => cache.trips.find(t => tripState(t).k === 'now') || null;
+const nextTrip = () => [...cache.trips].filter(t => tripState(t).k === 'soon').sort((a, b) => a.start_date.localeCompare(b.start_date))[0] || null;
+function tripStateText(t) {
+  const s = tripState(t);
+  if (s.k === 'now') return 'Day ' + s.day + ' of ' + tripDays(t);
+  if (s.k === 'soon') return s.days === 1 ? 'Starts tomorrow' : 'In ' + s.days + ' days';
+  return 'Finished';
+}
+const tripDates = t => {
+  const a = dateOf(t.start_date), b = dateOf(t.end_date), y = a.getFullYear() === b.getFullYear();
+  return a.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(y ? {} : { year: 'numeric' }) }) + ' to ' + b.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+/* a trip's group: Taxi belongs to Transport */
+const tripGroup = sub => TRIP_TRANSPORT.includes(sub) ? 'Transport' : (sub || 'Other');
+function tripLabel(e) {
+  const t = tripOf(e), g = tripGroup(e.subcategory);
+  const kind = e.subcategory && g !== e.subcategory ? g + ', ' + e.subcategory : (e.subcategory || 'Trip');
+  return (t ? (t.emoji || '🧳') + ' ' + t.name + ', ' : 'Trip, ') + kind;
+}
+/* total in one currency, or by currency when it cannot be converted */
+function tripMoney(rows, b) {
+  const ok = c => Number.isFinite(conv(1, c, b));
+  let total = 0; const left = {};
+  rows.forEach(e => { const c = e.currency || 'GBP'; if (ratesReady() && ok(c)) total += conv(e.amount, c, b); else left[c] = (left[c] || 0) + num(e.amount); });
+  return { total, left };
+}
+const leftText = left => Object.entries(left).map(([c, v]) => money(v, c)).join(' + ');
+function tripSums(t) {
+  const b = ratesReady() ? base() : (t.currency || 'GBP');
+  const rows = tripRows(t);
+  const before = rows.filter(e => e.date < t.start_date), during = rows.filter(e => e.date >= t.start_date);
+  const all = tripMoney(rows, b), pre = tripMoney(before, b), dur = tripMoney(during, b);
+  const budget = num(t.budget) > 0 ? conv(t.budget, t.currency || 'GBP', b) : null;
+  return { b, rows, before, during, total: all.total, left: all.left, pre: pre.total, dur: dur.total, budget: Number.isFinite(budget) ? budget : null };
+}
+
+/* ── the card on the Expenses page ── */
+function tripBanner() {
+  const t = activeTrip() || nextTrip();
+  if (!t) return null;
+  const s = tripState(t), sum = tripSums(t);
+  if (s.k === 'soon' && s.days > 60 && !sum.rows.length) return null;
+  const pct = sum.budget ? Math.min(100, sum.total / sum.budget * 100) : null;
+  let line;
+  if (s.k === 'now') {
+    const perDay = sum.dur / s.day;
+    line = money(sum.total, sum.b) + ' spent' + (sum.dur ? ', ' + money(perDay, sum.b) + ' a day' : '');
+    if (sum.budget) {
+      const rest = sum.budget - sum.total;
+      line += rest >= 0 ? '. You can spend ' + money(rest / s.left, sum.b) + ' a day for the rest' : '. ' + money(-rest, sum.b) + ' over budget';
+    }
+  } else line = sum.total ? money(sum.total, sum.b) + ' spent so far on bookings' : 'Nothing booked yet';
+  return h('div', { class: 'trip-banner' + (s.k === 'now' ? ' live' : '') },
+    h('button', { class: 'trip-banner-main', onclick: () => openTrip(t.id) },
+      h('span', { class: 'trip-emo emo', 'aria-hidden': 'true' }, t.emoji || '🧳'),
+      h('span', { class: 'trip-banner-text' },
+        h('span', { class: 'trip-banner-top' }, h('b', null, t.name), h('span', { class: 'chip ' + (s.k === 'now' ? 'accent' : 'neutral') + ' sm' }, tripStateText(t))),
+        h('span', { class: 'trip-banner-line' }, line, Object.keys(sum.left).length ? ' + ' + leftText(sum.left) : ''),
+        pct !== null ? h('span', { class: 'trip-bar' + (sum.total > sum.budget ? ' over' : '') }, h('i', { style: { width: pct + '%' } })) : null)),
+    h('button', { class: 'btn btn-primary sm', onclick: () => openEntrySheet({ cat: 'Trip', trip: t.id }) }, '+ Trip expense'));
+}
+/* a small list in the side column of Expenses */
+function tripsPanel() {
+  const list = [...cache.trips].sort((a, b) => tripOrder(a) - tripOrder(b) || a.start_date.localeCompare(b.start_date)).slice(0, 3);
+  return h('div', { class: 'panel' },
+    h('div', { class: 'month-nav' }, h('div', { class: 't' }, '🧳 Trips'),
+      h('button', { class: 'btn btn-ghost sm', onclick: () => cache.trips.length ? openTrip(null) : openTripSheet() }, cache.trips.length ? 'See all' : '+ New trip')),
+    list.length ? h('div', { class: 'trip-mini-list' }, list.map(t => {
+      const sum = tripSums(t);
+      return h('button', { class: 'trip-mini', onclick: () => openTrip(t.id) },
+        h('span', { class: 'emo', 'aria-hidden': 'true' }, t.emoji || '🧳'),
+        h('span', { class: 'trip-mini-name' }, t.name, h('small', null, tripStateText(t))),
+        h('span', { class: 'trip-mini-val' }, money(sum.total, sum.b)));
+    })) : h('div', { class: 'hint' }, 'Plan a trip and see what it costs, before you go and while you are there.'));
+}
+const tripOrder = t => ({ now: 0, soon: 1, past: 2 })[tripState(t).k];
+function openTrip(id = null) {
+  ui.tripId = id; renderTrips();
+  if (ui.view !== 'trips') showView('trips'); else window.scrollTo({ top: 0 });
+}
+
+/* ── the Trips page ── */
+function renderTrips() {
+  const root = beginView('trips');
+  const t = ui.tripId ? tripById(ui.tripId) : null;
+  if (ui.tripId && !t) ui.tripId = null;
+  root.appendChild(h('button', { class: 'back-link', onclick: () => t ? openTrip(null) : showView('expenses') }, '‹ ' + (t ? 'All trips' : 'Expenses')));
+  if (t) return tripDetail(root, t);
+
+  root.appendChild(pageHead('trips', { label: 'New trip', onclick: () => openTripSheet() }));
+  root.appendChild(currencyBar());
+  if (tripStore === 'local') root.appendChild(h('div', { class: 'callout' },
+    h('span', { class: 'emo', 'aria-hidden': 'true' }, '💾'),
+    h('div', null,
+      h('div', { class: 'callout-title' }, 'Trips are saved on this device for now'),
+      h('p', null, 'Everything works, and trip expenses are matched to a trip by their date. Run the setup once in Supabase to sync trips to your phone and laptop, and to pick the trip for each expense yourself.'),
+      h('div', { class: 'filter-line', style: { marginTop: '10px' } },
+        h('button', { class: 'btn btn-primary sm', onclick: openTripSetupSheet }, 'Set up sync'),
+        h('button', { class: 'btn btn-ghost sm', onclick: () => copyText(TRIPS_SQL) }, 'Copy SQL')))));
+  else if (localTrips().length) root.appendChild(h('div', { class: 'callout' },
+    h('span', { class: 'emo', 'aria-hidden': 'true' }, '☁️'),
+    h('div', null, h('div', { class: 'callout-title' }, localTrips().length + ' trips are still only on this device'),
+      h('button', { class: 'btn btn-primary sm', style: { marginTop: '10px' }, onclick: e => moveLocalTripsUp(e.currentTarget) }, 'Move them up'))));
+  if (tripErr) root.appendChild(h('div', { class: 'hint box', style: { marginBottom: '16px' } }, '⚠️ Could not load trips: ' + tripErr));
+
+  if (!cache.trips.length) {
+    root.appendChild(h('div', { class: 'list' }, empty('🧳', 'No trips yet. Add one with its dates, and every Trip expense is counted for it, from the first booking to the last taxi home.', { label: '+ Plan a trip', onclick: () => openTripSheet() })));
+  } else {
+    const groups = [['now', 'On a trip now'], ['soon', 'Coming up'], ['past', 'Past trips']];
+    groups.forEach(([k, title]) => {
+      const list = cache.trips.filter(t => tripState(t).k === k).sort((a, b) => k === 'past' ? b.start_date.localeCompare(a.start_date) : a.start_date.localeCompare(b.start_date));
+      if (list.length) root.appendChild(section(title, null, h('div', { class: 'trip-grid' }, list.map(tripCard))));
+    });
+  }
+  /* trip expenses not matched to any trip */
+  const loose = cache.entries.filter(e => e.type === 'expense' && e.category === 'Trip' && !tripOf(e));
+  if (loose.length) {
+    const b = ratesReady() ? base() : 'GBP', m = tripMoney(loose, b);
+    root.appendChild(section('Not linked to a trip', money(m.total, b) + (Object.keys(m.left).length ? ' + ' + leftText(m.left) : '') + ', ' + loose.length + (loose.length === 1 ? ' expense' : ' expenses'),
+      h('div', { class: 'list' }, loose.slice(0, 20).map(e => entryRow(e)))));
+  }
+}
+function tripCard(t) {
+  const s = tripState(t), sum = tripSums(t);
+  const pct = sum.budget ? Math.min(100, sum.total / sum.budget * 100) : null;
+  return h('button', { class: 'trip-card' + (s.k === 'now' ? ' live' : ''), onclick: () => openTrip(t.id) },
+    h('div', { class: 'trip-card-top' },
+      h('span', { class: 'trip-emo emo', 'aria-hidden': 'true' }, t.emoji || '🧳'),
+      h('span', { class: 'chip sm ' + (s.k === 'now' ? 'accent' : 'neutral') }, tripStateText(t))),
+    h('div', { class: 'trip-card-name' }, t.name),
+    h('div', { class: 'trip-card-dates' }, tripDates(t) + ', ' + tripDays(t) + (tripDays(t) === 1 ? ' day' : ' days')),
+    h('div', { class: 'trip-card-val' }, money(sum.total, sum.b), Object.keys(sum.left).length ? h('small', null, ' + ' + leftText(sum.left)) : null),
+    pct !== null ? h('div', { class: 'trip-bar' + (sum.total > sum.budget ? ' over' : '') }, h('i', { style: { width: pct + '%' } })) : null,
+    h('div', { class: 'trip-card-note' }, sum.budget ? (sum.total <= sum.budget ? money(sum.budget - sum.total, sum.b) + ' left of ' + money(sum.budget, sum.b) : money(sum.total - sum.budget, sum.b) + ' over budget') : sum.rows.length + (sum.rows.length === 1 ? ' expense' : ' expenses')));
+}
+function tripDetail(root, t) {
+  const s = tripState(t), sum = tripSums(t), b = sum.b, days = tripDays(t);
+  root.appendChild(h('div', { class: 'page-head' },
+    h('h1', { class: 'page-title' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, t.emoji || '🧳'), t.name),
+    h('div', { class: 'page-actions' },
+      h('button', { class: 'btn btn-ghost sm', onclick: () => openTripSheet(t) }, '✏️ Edit'),
+      h('button', { class: 'btn btn-primary page-action', onclick: () => openEntrySheet({ cat: 'Trip', trip: t.id }) }, h('span', { class: 'plus', 'aria-hidden': 'true' }, '+'), 'Trip expense'))));
+  root.appendChild(h('div', { class: 'trip-sub' }, h('span', { class: 'chip ' + (s.k === 'now' ? 'accent' : 'neutral') }, tripStateText(t)), h('span', null, tripDates(t) + ', ' + days + (days === 1 ? ' day' : ' days'))));
+  root.appendChild(currencyBar());
+
+  /* the big number and the budget */
+  const over = sum.budget !== null && sum.total > sum.budget;
+  root.appendChild(h('div', { class: 'hero' },
+    h('div', { class: 'hero-label' }, 'Spent on this trip'),
+    h('div', { class: 'hero-nums' }, sum.total || !Object.keys(sum.left).length ? countEl(sum.total, v => money(v, b)) : null,
+      Object.keys(sum.left).map(c => h('span', { class: 'hero-num' }, money(sum.left[c], c)))),
+    h('div', { class: 'hero-sub' },
+      sum.budget !== null ? h('span', { class: 'chip ' + (over ? 'bad' : 'good') }, over ? money(sum.total - sum.budget, b) + ' over budget' : money(sum.budget - sum.total, b) + ' left of ' + money(sum.budget, b)) : null,
+      h('span', null, sum.rows.length + (sum.rows.length === 1 ? ' expense' : ' expenses')))));
+  if (sum.budget !== null) root.appendChild(h('div', { class: 'trip-bar big' + (over ? ' over' : '') }, h('i', { style: { width: Math.min(100, sum.total / sum.budget * 100) + '%' } })));
+
+  /* the numbers that help while you are there */
+  const daysSoFar = s.k === 'now' ? s.day : s.k === 'past' ? days : 0;
+  const perDay = daysSoFar ? sum.dur / daysSoFar : 0;
+  let allow = null;
+  if (sum.budget !== null && s.k !== 'past') {
+    const left = sum.budget - sum.total, dLeft = s.k === 'now' ? s.left : days;
+    allow = stat(s.k === 'now' ? 'You can spend a day' : 'Daily budget', h('span', { class: left < 0 ? 'neg' : '' }, money(Math.max(0, left) / dLeft, b)), left < 0 ? 'already over budget' : 'for the ' + dLeft + (dLeft === 1 ? ' day left' : ' days left'));
+  }
+  root.appendChild(h('div', { class: 'stats four' },
+    stat('Before the trip', money(sum.pre, b), sum.before.length ? sum.before.length + (sum.before.length === 1 ? ' booking' : ' bookings') : 'nothing booked ahead'),
+    stat('During the trip', money(sum.dur, b), s.k === 'soon' ? 'starts ' + fmtDay(t.start_date) : sum.during.length + (sum.during.length === 1 ? ' expense' : ' expenses')),
+    stat('Average a day', daysSoFar ? money(perDay, b) : '—', daysSoFar ? 'over ' + daysSoFar + (daysSoFar === 1 ? ' day' : ' days') + ', bookings not counted' : 'once the trip starts'),
+    allow || stat('Days', String(days), s.k === 'past' ? 'finished ' + fmtDate(t.end_date) : s.k === 'now' ? s.left + ' left' : 'starts in ' + s.days)));
+
+  const left = h('div');
+  if (!sum.rows.length) left.appendChild(h('div', { class: 'list' }, empty('🧾', 'Nothing spent on this trip yet. Flights and hotels you book before you go count too.', { label: '+ Add a trip expense', onclick: () => openEntrySheet({ cat: 'Trip', trip: t.id }) })));
+  else {
+    /* day by day, newest first */
+    const list = h('div', { class: 'list' });
+    const byDay = new Map();
+    [...sum.rows].sort((x, y) => (y.date + (y.created_at || '')).localeCompare(x.date + (x.created_at || ''))).forEach(e => { const k = e.date < t.start_date ? 'before' : e.date; if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); });
+    byDay.forEach((rows, k) => {
+      const m = tripMoney(rows, b);
+      const title = k === 'before' ? '🎫 Before the trip' : k > t.end_date ? dayTitle(k) + ', after' : 'Day ' + (daysBetween(t.start_date, k) + 1) + ', ' + dayTitle(k);
+      list.appendChild(h('div', { class: 'group-head' }, h('span', null, title), h('span', { class: 'gtot' }, money(m.total, b) + (Object.keys(m.left).length ? ' + ' + leftText(m.left) : ''))));
+      rows.forEach(e => list.appendChild(entryRow(e)));
+    });
+    left.appendChild(section('Every expense', null, list));
+  }
+  /* where the money went */
+  const groupRows = sum.rows.map(e => ({ ...e, category: tripGroup(e.subcategory), subcategory: TRIP_TRANSPORT.includes(e.subcategory) ? e.subcategory : null }));
+  const ok = c => ratesReady() && Number.isFinite(conv(1, c, b));
+  const right = h('div', { class: 'stack-tight' },
+    h('div', { class: 'panel' }, h('div', { class: 'month-nav' }, h('div', { class: 't' }, 'Where it went')),
+      catBars(categoryRows(groupRows, e => ok(e.currency || 'GBP') ? conv(e.amount, e.currency || 'GBP', b) : NaN), b, { max: 9, emptyText: 'Nothing spent yet.' })),
+    t.notes ? h('div', { class: 'panel' }, h('div', { class: 'month-nav' }, h('div', { class: 't' }, '📝 Notes')), h('p', { class: 'trip-notes' }, t.notes)) : null,
+    h('button', { class: 'btn btn-ghost sm trip-del', onclick: () => deleteTrip(t) }, '🗑 Delete trip'));
+  root.appendChild(h('div', { class: 'grid-2' }, left, right));
+}
+
+/* ── add or edit a trip ── */
+function openTripSheet(existing = null, { after = null } = {}) {
+  const t = existing ? { ...existing } : { name: '', emoji: '✈️', start_date: shiftDays(todayStr(), 14), end_date: shiftDays(todayStr(), 20), budget: '', currency: ratesReady() ? base() : 'GBP', notes: '' };
+  const name = input({ type: 'text', maxlength: 80, value: t.name, placeholder: 'Istanbul with friends', enterkeyhint: 'next' });
+  const start = input({ type: 'date', value: t.start_date }), end = input({ type: 'date', value: t.end_date });
+  const budget = input({ type: 'text', inputmode: 'decimal', value: t.budget ? String(num(t.budget)) : '', placeholder: 'Optional' });
+  const notes = h('textarea', { class: 'textarea', maxlength: 2000, value: t.notes || '', placeholder: 'Flight numbers, hotel address, plans' });
+  const len = h('div', { class: 'hint' });
+  const paintLen = () => { const d = start.value && end.value ? daysBetween(start.value, end.value) + 1 : 0; len.textContent = d > 0 ? d + (d === 1 ? ' day' : ' days') : 'The end date must be after the start'; len.classList.toggle('bad-text', !(d > 0)); };
+  start.addEventListener('change', () => { if (end.value && end.value < start.value) end.value = start.value; paintLen(); });
+  end.addEventListener('change', paintLen); paintLen();
+  const emo = h('div', { class: 'pill-grid' });
+  const paintEmo = () => { clear(emo); TRIP_EMOJIS.forEach(x => emo.appendChild(h('button', { type: 'button', class: 'pill emo-pill' + (t.emoji === x ? ' on' : ''), 'aria-label': 'Icon ' + x, onclick: () => { t.emoji = x; paintEmo(); } }, h('span', { class: 'emo' }, x)))); };
+  paintEmo();
+  const btn = h('button', { class: 'btn btn-primary block' }, existing ? 'Save trip' : 'Add trip');
+  btn.addEventListener('click', async () => {
+    const nm = name.value.trim();
+    if (!nm) return shake(name);
+    if (!start.value || !end.value || end.value < start.value) return shake(end);
+    const bud = parseAmount(budget.value);
+    const row = { name: nm, emoji: t.emoji, start_date: start.value, end_date: end.value, budget: bud > 0 ? bud : null, currency: t.currency, notes: notes.value.trim() || null };
+    btn.disabled = true;
+    const ok = await saveTrip(row, existing);
+    btn.disabled = false;
+    if (!ok) return;
+    closeSheet(); toast(existing ? 'Trip saved' : 'Trip added. Trip expenses now count for it');
+    const made = existing ? tripById(existing.id) : [...cache.trips].reverse().find(x => x.name === nm && x.start_date === row.start_date);
+    if (after && made) return after(made.id);
+    renderAll();
+    if (made) openTrip(made.id);
+  });
+  openSheet(existing ? 'Edit trip' : 'New trip', h('div', null,
+    field('Where are you going?', name),
+    h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Icon'), emo),
+    h('div', { class: 'field-row' }, field('From', start), field('To', end)), len,
+    h('div', { class: 'field', style: { marginTop: '14px' } }, h('label', { for: budget.id || (budget.id = 'f' + (++fieldSeq)) }, 'Budget for the whole trip'),
+      h('div', { class: 'amount-wrap slim' }, budget, seg(TRIP_CURS.map(c => [c, SYM[c]]), t.currency, v => { t.currency = v; }))),
+    h('div', { class: 'hint', style: { marginTop: '-6px', marginBottom: '14px' } }, 'Include flights and hotel if you want the budget to cover them.'),
+    field('Notes', notes)),
+    { onOpen: () => name.focus(), footer: btn });
+}
+function openTripSetupSheet() {
+  openSheet('Sync trips', h('div', null,
+    h('ol', { class: 'm-steps-howto' },
+      h('li', null, 'Open your project on supabase.com.'),
+      h('li', null, 'Go to SQL Editor and click New query.'),
+      h('li', null, 'Paste the text below and press Run.'),
+      h('li', null, 'Come back here and tap Check again.')),
+    h('pre', { class: 'm-sql' }, TRIPS_SQL),
+    h('div', { class: 'hint box', style: { marginTop: '12px' } }, 'This makes one new table called trips, and adds one empty column called trip_id to your expenses. Nothing you saved is changed. Only your account can see your trips.')),
+    { footer: h('div', { class: 'foot-row' },
+      h('button', { class: 'btn btn-ghost', onclick: () => copyText(TRIPS_SQL) }, 'Copy SQL'),
+      h('button', { class: 'btn btn-primary', onclick: async e => {
+        e.currentTarget.disabled = true; await loadTrips(); closeSheet();
+        toast(tripStore === 'db' ? 'Trip sync is on' : 'Still no trips table. Run the SQL, then try again', tripStore === 'db' ? 'ok' : 'error');
+        renderAll();
+      } }, 'Check again')) });
+}
+function copyText(txt) {
+  const done = () => toast('SQL copied. Paste it in Supabase, SQL Editor');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(done, () => toast('Could not copy. Select the text and copy it', 'error'));
+  else toast('Could not copy. Select the text and copy it', 'error');
+}
+
 /* ══════════════════════════ REPORT (PDF) ══════════════════════════ */
 /* Builds a PDF of your investments and gold right here in the browser and downloads it.
    Nothing is sent anywhere. The PDF library and the Manrope font load from jsDelivr
@@ -3803,72 +4211,132 @@ function buildReport(jsPDF, fonts, opt) {
 }
 
 /* ══════════════════════════ SHEETS ══════════════════════════ */
-function openEntrySheet() {
-  const st = { type: 'expense', cur: load('ledger.lastCur', 'GBP'), cat: null, sub: null, date: ui.day };
-  const amount = h('input', { class: 'amount-input', type: 'text', inputmode: 'decimal', placeholder: '0.00', 'aria-label': 'Amount', autocomplete: 'off', enterkeyhint: 'done' });
-  const desc = h('input', { class: 'input', type: 'text', maxlength: 200, placeholder: 'Optional', enterkeyhint: 'done' });
+/* preset: { cat, trip, amount, desc, date, cur, sub } fills the sheet in, for example from a trip page */
+function openEntrySheet(preset = {}) {
+  const live = activeTrip();
+  /* on a trip, a new expense starts as a trip expense */
+  if (!preset.cat && live && (ui.day === todayStr() || (ui.day >= live.start_date && ui.day <= live.end_date))) preset = { cat: 'Trip', trip: live.id, ...preset };
+  const isTripStart = preset.cat === 'Trip';
+  const st = { type: 'expense', cur: isTripStart ? load('ledger.lastTripCur', load('ledger.lastCur', 'GBP')) : load('ledger.lastCur', 'GBP'), cat: null, sub: null, date: ui.day, trip: null, tripPicked: false, ...preset };
+  if (preset.trip) st.tripPicked = true;
+  if (st.cat === 'Trip' && !preset.date) { const tr = tripById(st.trip); if (tr && !(ui.day >= tr.start_date && ui.day <= tr.end_date) && tripState(tr).k === 'now') st.date = todayStr(); }
+  const amount = h('input', { class: 'amount-input', type: 'text', inputmode: 'decimal', placeholder: '0.00', 'aria-label': 'Amount', autocomplete: 'off', enterkeyhint: 'done', value: preset.amount || '' });
+  const desc = h('input', { class: 'input', type: 'text', maxlength: 200, placeholder: 'Optional', enterkeyhint: 'done', value: preset.desc || '' });
   const dateLabel = h('span', null, dayTitle(st.date));
   const date = h('input', { type: 'date', value: st.date, 'aria-label': 'Date',
-    onchange: e => { if (e.target.value) { st.date = e.target.value; dateLabel.textContent = dayTitle(st.date); } } });
+    onchange: e => { if (e.target.value) { st.date = e.target.value; dateLabel.textContent = dayTitle(st.date); if (st.cat === 'Trip' && !st.tripPicked) { st.trip = tripForDate(st.date)?.id || st.trip; paintTrip(); } } } });
   const dateChip = h('label', { class: 'date-chip', onclick: () => { try { date.showPicker?.(); } catch { /* not allowed */ } } },
     h('span', { class: 'emo', 'aria-hidden': 'true' }, '📅'), dateLabel, date);
   const catGrid = h('div', { class: 'cat-grid', role: 'radiogroup', 'aria-label': 'Category' });
   const subWrap = h('div', { class: 'field', hidden: true }, h('span', { class: 'field-label' }, 'What kind?'));
   const subGrid = h('div', { class: 'pill-grid' }); subWrap.appendChild(subGrid);
+  const tripWrap = h('div', { class: 'trip-pick', hidden: true });
   const saveBtn = h('button', { class: 'btn btn-primary' }, 'Save expense');
   const label = () => {
     const a = parseAmount(amount.value);
-    const kind = st.type === 'expense' ? 'expense' : 'income';
+    const kind = st.type === 'expense' ? (st.cat === 'Trip' ? 'trip expense' : 'expense') : 'income';
     saveBtn.textContent = a > 0 ? 'Save ' + money(a, st.cur) + ' ' + kind : 'Save ' + kind;
   };
   amount.addEventListener('input', label);
   amount.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); amount.blur(); } });
   desc.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveBtn.click(); } });
 
+  const curBox = h('div', { class: 'cur-box' });
+  const paintCur = () => {
+    const list = st.cat === 'Trip' ? TRIP_CURS : ['GBP', 'AZN'];
+    if (!list.includes(st.cur)) st.cur = list[0];
+    clear(curBox); curBox.appendChild(seg(list.map(c => [c, SYM[c]]), st.cur, v => { st.cur = v; label(); }));
+    label();
+  };
+  const pickCat = c => {
+    const wasTrip = st.cat === 'Trip';
+    st.cat = c; st.sub = null;
+    if (c === 'Trip' && !wasTrip) { if (!st.tripPicked) st.trip = tripForDate(st.date)?.id || activeTrip()?.id || nextTrip()?.id || null; st.cur = load('ledger.lastTripCur', st.cur); }
+    paintCats(); paintSubs(); paintTrip(); paintCur();
+  };
   const paintCats = () => {
     clear(catGrid);
     (st.type === 'expense' ? EXPENSE_CATS : INCOME_CATS).forEach(c => catGrid.appendChild(
-      h('button', { type: 'button', class: 'cat' + (st.cat === c ? ' on' : ''), role: 'radio', 'aria-checked': st.cat === c, onclick: () => { st.cat = c; st.sub = null; paintCats(); paintSubs(); } },
+      h('button', { type: 'button', class: 'cat' + (st.cat === c ? ' on' : '') + (c === 'Trip' ? ' cat-trip' : ''), role: 'radio', 'aria-checked': st.cat === c, onclick: () => pickCat(c) },
         h('span', { class: 'emo', 'aria-hidden': 'true' }, CAT_EMOJI[c] || '📦'), c)));
   };
   const paintSubs = () => {
-    const subs = SUBCATS[st.cat];
+    const subs = st.cat === 'Trip' ? null : SUBCATS[st.cat];
     subWrap.hidden = !subs;
     clear(subGrid);
     (subs || []).forEach(sb => subGrid.appendChild(h('button', { type: 'button', class: 'pill' + (st.sub === sb ? ' on' : ''), onclick: () => { st.sub = st.sub === sb ? null : sb; paintSubs(); } },
       h('span', { class: 'emo', 'aria-hidden': 'true' }, SUB_EMOJI[sb] || ''), sb)));
   };
+  /* trip: which trip, what for, and which transport */
+  const paintTrip = () => {
+    tripWrap.hidden = st.cat !== 'Trip';
+    clear(tripWrap);
+    if (st.cat !== 'Trip') return;
+    const today = todayStr();
+    const choices = [...cache.trips].filter(t => tripState(t).k !== 'past' || daysBetween(t.end_date, today) <= 60 || t.id === st.trip)
+      .sort((a, b) => tripOrder(a) - tripOrder(b) || a.start_date.localeCompare(b.start_date));
+    const keep = { amount: amount.value, desc: desc.value, date: st.date, cur: st.cur, sub: st.sub, cat: 'Trip' };
+    const newTrip = h('button', { type: 'button', class: 'pill', onclick: () => openTripSheet(null, { after: id => openEntrySheet({ ...keep, trip: id }) }) }, '＋ New trip');
+    let pick;
+    if (tripStore === 'db') {
+      pick = h('div', { class: 'pill-grid' },
+        choices.map(t => h('button', { type: 'button', class: 'pill' + (st.trip === t.id ? ' on' : ''), onclick: () => { st.trip = st.trip === t.id ? null : t.id; st.tripPicked = true; paintTrip(); } },
+          h('span', { class: 'emo', 'aria-hidden': 'true' }, t.emoji || '🧳'), t.name, h('small', { class: 'pill-note' }, tripStateText(t)))),
+        newTrip);
+    } else {
+      const t = tripForDate(st.date);
+      pick = h('div', null, h('div', { class: 'hint' }, t ? 'Counts for ' + (t.emoji || '🧳') + ' ' + t.name + ', by its date.' : cache.trips.length ? 'No trip around this date, so it is kept as trip spending without a trip.' : 'Add a trip to see its total.'),
+        h('div', { class: 'pill-grid', style: { marginTop: '8px' } }, newTrip));
+    }
+    tripWrap.append(
+      h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Which trip?'), pick),
+      h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'What for?'),
+        h('div', { class: 'pill-grid' }, TRIP_SUBS.map(sb => {
+          const on = tripGroup(st.sub) === sb && st.sub !== null;
+          return h('button', { type: 'button', class: 'pill' + (on ? ' on' : ''), onclick: () => { st.sub = on ? null : sb; paintTrip(); } },
+            h('span', { class: 'emo', 'aria-hidden': 'true' }, CAT_EMOJI[sb] || '📦'), sb);
+        }))),
+      tripGroup(st.sub) === 'Transport' && st.sub ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Which transport?'),
+        h('div', { class: 'pill-grid' }, TRIP_TRANSPORT.map(sb => h('button', { type: 'button', class: 'pill' + (st.sub === sb ? ' on' : ''), onclick: () => { st.sub = st.sub === sb ? 'Transport' : sb; paintTrip(); } },
+          h('span', { class: 'emo', 'aria-hidden': 'true' }, SUB_EMOJI[sb] || ''), sb)))) : null);
+  };
   const typeSeg = seg([['expense', 'Expense', 'out'], ['income', 'Income', 'in']], st.type, v => {
-    st.type = v; st.cat = null; st.sub = null; paintCats(); paintSubs(); label();
+    st.type = v; st.cat = null; st.sub = null; paintCats(); paintSubs(); paintTrip(); paintCur();
   }, { full: true });
-  const curSeg = seg([['GBP', '£'], ['AZN', '₼']], st.cur, v => { st.cur = v; label(); });
-  paintCats(); paintSubs();
+  paintCats(); paintSubs(); paintTrip(); paintCur();
 
   saveBtn.addEventListener('click', async () => {
     const a = parseAmount(amount.value);
     if (!(a > 0)) return shake(amount);
     if (!st.cat) { catGrid.animate?.([{ transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'none' }], 300); return toast('Pick a category', 'error'); }
+    const isTrip = st.cat === 'Trip';
     const d = desc.value.trim() || st.sub || st.cat;
+    const row = { date: st.date, type: st.type, amount: a, currency: st.cur, description: d, category: st.cat, subcategory: st.sub, user_id: user.id };
+    if (isTrip && tripStore === 'db' && st.trip) row.trip_id = st.trip;
     saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
-    const { error } = await db.from('entries').insert([{
-      date: st.date, type: st.type, amount: a, currency: st.cur,
-      description: d, category: st.cat, subcategory: st.sub, user_id: user.id,
-    }]);
+    let { error } = await db.from('entries').insert([row]);
+    if (error && row.trip_id && /trip_id/.test(error.message || '')) {
+      /* the trips table is there but the expenses column is not: save it anyway, linked by date */
+      delete row.trip_id; ({ error } = await db.from('entries').insert([row]));
+      if (!error) toast('Saved. Run the trips SQL again to link expenses to a trip yourself', 'error');
+    }
     saveBtn.disabled = false; label();
     if (error) return toast('Could not save: ' + error.message, 'error');
-    save('ledger.lastCur', st.cur);
+    save(isTrip ? 'ledger.lastTripCur' : 'ledger.lastCur', st.cur);
     ui.day = st.date; ui.month = ui.day.slice(0, 7);
     ui.flashKey = ui.day + '|' + d + '|' + a;
     closeSheet();
-    toast(st.type === 'expense' ? 'Expense saved' : 'Income saved');
+    const tr = isTrip ? (row.trip_id ? tripById(row.trip_id) : tripForDate(st.date)) : null;
+    toast(st.type === 'income' ? 'Income saved' : tr ? 'Saved to ' + tr.name : 'Expense saved');
+    if (st.cur === 'TRY' && !tryPerUsd() && ratesReady()) fetchLiveRates();   // so lira can be converted
     refreshAll();
   });
 
   openSheet('Add to your ledger', h('div', null,
     h('div', { class: 'field' }, typeSeg),
-    h('div', { class: 'amount-wrap' }, amount, curSeg),
+    h('div', { class: 'amount-wrap' }, amount, curBox),
     h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Category'), catGrid),
-    subWrap,
+    subWrap, tripWrap,
     field('Note', desc)),
     { onOpen: () => amount.focus(), footer: h('div', { class: 'foot-row' }, dateChip, saveBtn) });
 }
