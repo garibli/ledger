@@ -830,6 +830,46 @@ main { max-width: 1120px; margin: 0 auto; min-width: 0; overflow-x: clip; paddin
 .bad-text { color: var(--red); }
 .cur-box { flex: none; }
 
+/* ───────────────────────── analysis ───────────────────────── */
+.an-mode { flex: 0 1 300px; }
+@media (max-width: 520px) { .an-mode { flex-basis: 100%; max-width: none; } .page-head:has(.an-mode) { flex-wrap: wrap; } }
+.an-time { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; padding: 12px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); }
+.an-step { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 46px; }
+.an-step .scroller { flex: 1; min-width: 0; }
+.an-period { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -.02em; min-width: 140px; text-align: center; }
+.an-step .nav-btn:disabled { opacity: .35; cursor: default; }
+.an-custom label { display: flex; align-items: center; gap: 8px; flex: 1 1 180px; }
+.an-custom .input { flex: 1; min-width: 0; height: 44px; }
+.an-tools { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.an-filter-row { display: flex; gap: 10px; align-items: center; }
+.an-search { flex: 1; min-width: 0; height: 46px; max-width: 420px; }
+.an-cat-btn { height: 46px; gap: 8px; flex: none; }
+.an-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+.chip-x { display: inline-flex; align-items: center; gap: 6px; border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent-ink); font-weight: 700; font-size: 13.5px; border-radius: 999px; height: 34px; padding: 0 12px; }
+.chip-x > span:last-child { font-size: 11px; opacity: .8; }
+.chip-x:hover { background: var(--accent); color: var(--on-accent); }
+.an-clear { border: 0; background: none; color: var(--muted); font-weight: 700; font-size: 13.5px; text-decoration: underline; padding: 4px; }
+.an-caption { margin: 4px 0 18px; }
+.cbar.pick { cursor: pointer; border-radius: 12px; margin: 0 -8px; padding: 6px 8px; transition: background-color .15s; outline: none; }
+.cbar.pick:hover, .cbar.pick:focus-visible { background: var(--surface-2); }
+.cbar.pick.on { background: var(--accent-soft); }
+.pickable { cursor: pointer; }
+.heat-cell.picked { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+.chart-key .sw b.dash { background: none; border-top: 2.5px dashed var(--muted); height: 0; border-radius: 0; width: 16px; }
+.row.no-del.top-row { grid-template-columns: 16px 44px minmax(0, 1fr) auto; gap: 10px; padding-left: 10px; }
+.top-rank { width: 18px; text-align: center; font-weight: 800; color: var(--muted); font-size: 13px; flex: none; }
+.ft-list { display: flex; flex-direction: column; }
+.ft-row { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+.ft-main { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 11px 2px; cursor: pointer; font-weight: 700; }
+.ft-main input, .ft-sub input { width: 19px; height: 19px; accent-color: var(--accent); flex: none; }
+.ft-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ft-val { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13.5px; color: var(--ink-2); }
+.quiet .ft-name, .quiet .ft-val { color: var(--muted); }
+.ft-open { border: 0; background: var(--surface-2); color: var(--ink-2); font-weight: 800; font-size: 12.5px; border-radius: 999px; height: 30px; padding: 0 10px; flex: none; }
+.ft-open.on { background: var(--accent-soft); color: var(--accent-ink); }
+.ft-subs { display: flex; flex-direction: column; padding: 4px 0 8px 30px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface-2) 50%, transparent); }
+.ft-sub { display: flex; align-items: center; gap: 10px; padding: 8px 2px; cursor: pointer; font-weight: 600; font-size: 14.5px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
 }
@@ -910,16 +950,17 @@ const VIEWS = {
   missions: { emoji: '🎯', title: 'Missions' },
 };
 const EXPENSE_CATS = ['Restaurant','Food Order','Market','Meat','Cigarettes','Transport','Trip','Shopping','Health','Entertainment','Monthly Payments','Date & Romantic','Other'];
-const INCOME_CATS  = ['Scholarship','Mama','Manat','Salary','Freelance','Other'];
-const SUBCATS = { 'Transport': ['Taxi','Bus','Metro','Train','Airplane','Car Rental'] };
+const INCOME_CATS  = ['Scholarship','Mama','Manat','Salary','Freelance','Cashback','VAT','Other'];
+const SUBCATS = { 'Transport': ['Taxi','Bus','Metro','Train','Airplane','Car Rental'], 'Monthly Payments': ['Subscriptions','Credit'] };
 const CAT_EMOJI = {
   'Restaurant':'🍽️','Food Order':'🛵','Market':'🛒','Meat':'🥩','Cigarettes':'🚬','Transport':'🚕','Shopping':'🛍️','Health':'💊',
   'Entertainment':'🎬','Monthly Payments':'🧾','Date & Romantic':'💕','Other':'📦',
   'Scholarship':'🎓','Mama':'👩','Manat':'💵','Salary':'💼','Freelance':'💻',
   'Food & Drink':'🍔','Housing':'🏠','Utilities':'💡',
+  'Cashback':'🪙','VAT':'🏛️',
   'Trip':'🧳','Hotel / Hostel':'🏨','Coffee & Snacks':'☕','Gifts & Souvenirs':'🎁','Tickets & Tours':'🎟️','SIM & Internet':'📶','Visa & Insurance':'🛂'
 };
-const SUB_EMOJI = { 'Taxi':'🚕','Bus':'🚌','Metro':'🚇','Train':'🚆','Airplane':'✈️','Ferry':'⛴️','Car Rental':'🚗' };
+const SUB_EMOJI = { 'Taxi':'🚕','Bus':'🚌','Metro':'🚇','Train':'🚆','Airplane':'✈️','Ferry':'⛴️','Car Rental':'🚗', 'Subscriptions':'🔁','Credit':'💳' };
 const KARATS = [[24,'99.9%'],[22,'91.6%'],[21,'87.5%'],[18,'75%'],[14,'58.5%'],[9,'37.5%']];
 const KARAT_FINENESS = { 24: 0.999, 22: 0.916, 21: 0.875, 18: 0.750, 14: 0.585, 9: 0.375 };
 const SYM = { GBP: '£', AZN: '₼', USD: '$', TRY: '₺', EUR: '€' };
@@ -1327,7 +1368,7 @@ function barPath(x, y, w, ht, r = 4) {
 }
 
 /* columns: items [{label, value, title, highlight}] */
-function columnChart({ items, cur, height = 210, avg = null, avgLabel = 'average', emphasis = false, labelHighlight = false, label }) {
+function columnChart({ items, cur, height = 210, avg = null, avgLabel = 'average', emphasis = false, labelHighlight = false, label, onPick = null }) {
   return chart((W, H, box) => {
     const padL = 46, padR = 8, padT = labelHighlight ? 22 : 12, padB = 26;
     const iw = Math.max(10, W - padL - padR), ih = H - padT - padB;
@@ -1348,7 +1389,7 @@ function columnChart({ items, cur, height = 210, avg = null, avgLabel = 'average
       let bar = null;
       if (d.value > 0) {
         const top = y(d.value), hgt = y(0) - top;
-        const fill = emphasis ? (d.highlight ? 'var(--accent)' : 'var(--bar-muted)') : 'var(--accent)';
+        const fill = emphasis || items.some(x => x.highlight) ? (d.highlight ? 'var(--accent)' : 'var(--bar-muted)') : 'var(--accent)';
         bar = s('path', { d: barPath(cx - bw / 2, top, bw, Math.max(1, hgt)), class: 'bar grow-y', style: { fill, animationDelay: Math.min(i * 18, 500) + 'ms' } });
         svg.appendChild(bar);
         if (labelHighlight && d.highlight) svg.appendChild(s('text', { x: cx, y: top - 7, 'text-anchor': 'middle', class: 'lbl-strong fade-in' }, compact(d.value, cur)));
@@ -1356,6 +1397,7 @@ function columnChart({ items, cur, height = 210, avg = null, avgLabel = 'average
       if (i % every === 0) svg.appendChild(s('text', { x: cx, y: H - 7, 'text-anchor': 'middle' }, d.label));
       const hit = s('rect', { x: padL + band * i, y: padT, width: band, height: ih, class: 'hit' });
       bindTip(hit, () => ({ title: d.title || d.label, rows: [{ value: money(d.value, cur), label: d.note || '' }] }), bar, box);
+      if (onPick) pickable(hit, () => { hideTip(); onPick(i); });
       svg.appendChild(hit);
     });
     if (avg !== null && avg > 0) {
@@ -1465,7 +1507,7 @@ function lineChart({ points, cur, height = 200, label }) {
 }
 
 /* category bars (HTML) */
-function catBars(rows, cur, { prev = null, max = 8, gold = false, upIsGood = false, emptyText = 'Nothing spent in this period.', fillColor = null } = {}) {
+function catBars(rows, cur, { prev = null, max = 8, gold = false, upIsGood = false, emptyText = 'Nothing spent in this period.', fillColor = null, onPick = null, active = null } = {}) {
   if (!rows.length) return h('div', { class: 'empty' }, emptyText);
   const total = rows.reduce((a, r) => a + r.value, 0) || 1;
   const top = rows[0].value || 1;
@@ -1486,7 +1528,8 @@ function catBars(rows, cur, { prev = null, max = 8, gold = false, upIsGood = fal
       }
     }
     const fill = h('div', { class: 'cbar-fill grow-x' + (gold ? ' gold' : ''), style: { width: (r.value / top * 100).toFixed(1) + '%', animationDelay: (i * 60) + 'ms', ...(fillColor ? { background: fillColor } : {}) } });
-    return h('div', { class: 'cbar' },
+    const row = h('div', { class: 'cbar' + (onPick ? ' pick' : '') + (active?.has(r.key) ? ' on' : ''), ...(onPick ? { role: 'button', tabindex: '0', title: 'Look inside ' + r.label,
+      onclick: () => onPick(r), onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(r); } } } : {}) },
       h('div', { class: 'cbar-top' },
         h('span', { class: 'cbar-emo emo', 'aria-hidden': 'true' }, r.emoji),
         h('div', { class: 'cbar-name' }, r.label, r.sub ? h('small', null, r.sub) : null),
@@ -1495,6 +1538,7 @@ function catBars(rows, cur, { prev = null, max = 8, gold = false, upIsGood = fal
       h('div', { class: 'cbar-track' },
         h('div', { class: 'cbar-bg' }, fill),
         h('span', { class: 'cbar-pct' }, Math.round(r.value / total * 100) + '%')));
+    return row;
   }));
 }
 
@@ -1518,7 +1562,7 @@ function stackBar(parts, fmt, { cols = true } = {}) {
 }
 
 /* calendar heat map */
-function heatCalendar(from, to, effTo, byDate, cur) {
+function heatCalendar(from, to, effTo, byDate, cur, onPick = null, picked = null) {
   const grid = h('div', { class: 'heat' }, WEEKDAYS.map(d => h('div', { class: 'heat-dow' }, d.slice(0, 1))));
   let max = 0; byDate.forEach(v => { if (v > max) max = v; });
   let d = startOfWeek(from), i = 0;
@@ -1529,11 +1573,12 @@ function heatCalendar(from, to, effTo, byDate, cur) {
     else {
       const v = byDate.get(d) || 0, t = max > 0 ? v / max : 0;
       const op = v > 0 ? 0.14 + 0.86 * t : 0;
-      const cell = h('div', { class: 'heat-cell' + (op > 0.55 ? ' dark' : ''), style: { '--i': i } },
+      const cell = h('div', { class: 'heat-cell' + (op > 0.55 ? ' dark' : '') + (d === picked ? ' picked' : ''), style: { '--i': i } },
         h('span', { class: 'fill', style: { opacity: op } }),
         h('span', { class: 'd' }, String(Number(d.slice(8)))));
       const day = d;
       bindTip(cell, () => ({ title: fmtDay(day), rows: [{ value: money(v, cur), label: v > 0 ? 'spent' : 'nothing spent' }] }));
+      if (onPick) pickable(cell, () => { hideTip(); onPick(day); });
       grid.appendChild(cell);
       i++;
     }
@@ -2398,271 +2443,583 @@ function ratesCallout() {
 }
 
 /* ══════════════════════════ ANALYSIS ══════════════════════════ */
+/* A dashboard you can click through: pick a period, filter by category or subcategory,
+   click a category to zoom into it, click a bar to zoom into that time, click a day to see it. */
+const RANGE_KINDS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['roll', 'Last days'], ['all', 'All time'], ['custom', 'Custom']];
+const ROLL_DAYS = [7, 14, 30, 90, 180, 365];
+function normRange(r) {
+  r = { kind: 'month', anchor: null, days: 30, from: null, to: null, ...(r || {}) };
+  const old = { last7: 7, last30: 30, last90: 90 }[r.kind];
+  if (old) { r.kind = 'roll'; r.days = old; }
+  if (r.kind === 'lastmonth') { r.kind = 'month'; r.anchor = addMonths(todayStr().slice(0, 7), -1) + '-15'; }
+  if (!RANGE_KINDS.some(([k]) => k === r.kind)) r.kind = 'month';
+  return r;
+}
+range = normRange(range);
+function saveRange() { save('ledger.range', range); anDay = null; anLimit = 30; renderAnalysis(); }
+const shortDate = (s, withYear) => dateOf(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) });
 function currentRange() {
-  const t = todayStr(), ym = t.slice(0, 7);
+  const t = todayStr(), a = range.anchor && range.anchor <= t ? range.anchor : t;
   switch (range.kind) {
-    case 'week': { const f = startOfWeek(t); return { from: f, to: shiftDays(f, 6), label: 'This week' }; }
-    case 'last7': return { from: shiftDays(t, -6), to: t, label: 'Last 7 days' };
-    case 'lastmonth': { const lm = addMonths(ym, -1), m = monthBounds(lm); return { from: m.first, to: m.last, label: monthLabel(lm) }; }
-    case 'last30': return { from: shiftDays(t, -29), to: t, label: 'Last 30 days' };
-    case 'last90': return { from: shiftDays(t, -89), to: t, label: 'Last 90 days' };
-    case 'year': return { from: t.slice(0, 4) + '-01-01', to: t.slice(0, 4) + '-12-31', label: t.slice(0, 4) };
-    case 'all': {
-      const ds = cache.entries.map(e => e.date).sort();
-      return { from: ds[0] || t, to: t, label: 'All time' };
+    case 'week': {
+      const f = startOfWeek(a), cur = f === startOfWeek(t);
+      return { from: f, to: shiftDays(f, 6), label: cur ? 'This week' : shortDate(f) + ' to ' + shortDate(shiftDays(f, 6), true), current: cur };
     }
-    case 'custom': return { from: range.from || shiftDays(t, -29), to: range.to || t, label: 'Custom' };
-    default: { const m = monthBounds(ym); return { from: m.first, to: m.last, label: monthLabel(ym) }; }
+    case 'year': { const y = a.slice(0, 4); return { from: y + '-01-01', to: y + '-12-31', label: y, current: y === t.slice(0, 4) }; }
+    case 'roll': { const n = range.days || 30; return { from: shiftDays(t, -(n - 1)), to: t, label: 'Last ' + n + ' days', current: true }; }
+    case 'all': { const ds = cache.entries.map(e => e.date).sort(); return { from: ds[0] || t, to: t, label: 'All time', current: true }; }
+    case 'custom': {
+      let f = range.from || shiftDays(t, -29), to = range.to || t;
+      if (f > to) [f, to] = [to, f];
+      return { from: f, to, label: shortDate(f, f.slice(0, 4) !== to.slice(0, 4)) + ' to ' + shortDate(to, true), current: to >= t };
+    }
+    default: { const ym = a.slice(0, 7), m = monthBounds(ym); return { from: m.first, to: m.last, label: monthLabel(ym), current: ym === t.slice(0, 7) }; }
   }
 }
-function periodPhrase(r) {
+function stepRange(dir) {
+  const t = todayStr(), a = range.anchor && range.anchor <= t ? range.anchor : t;
+  if (range.kind === 'week') range.anchor = shiftDays(a, 7 * dir);
+  else if (range.kind === 'month') range.anchor = addMonths(a.slice(0, 7), dir) + '-15';
+  else if (range.kind === 'year') range.anchor = (Number(a.slice(0, 4)) + dir) + '-06-15';
+  if (range.anchor && range.anchor >= t) range.anchor = null;    // back to the current period
+  saveRange();
+}
+function zoomTo(kind, day) { range.kind = kind; range.anchor = day >= todayStr() ? null : day; saveRange(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+function periodPhrase(r, verb = 'Spent') {
   switch (range.kind) {
-    case 'week': return 'Spent this week';
-    case 'last7': return 'Spent in the last 7 days';
-    case 'last30': return 'Spent in the last 30 days';
-    case 'last90': return 'Spent in the last 90 days';
-    case 'year': return 'Spent in ' + r.label;
-    case 'all': return 'Spent in total';
-    case 'custom': return 'Spent in this period';
-    default: return 'Spent in ' + r.label;
+    case 'week': return verb + (r.current ? ' this week' : ' that week');
+    case 'roll': return verb + ' in the last ' + (range.days || 30) + ' days';
+    case 'all': return verb + ' in total';
+    case 'custom': return verb + ' in this period';
+    default: return verb + ' in ' + r.label;
   }
 }
 function effTo(r) { const t = todayStr(); return r.to < t ? r.to : t; }
-function previousRange(r) {
+/* the period before, cut to the same number of days when this one is not over yet */
+function previousRange(r, full = false) {
   const end = effTo(r);
   if (range.kind === 'all' || end < r.from) return null;
-  if (range.kind === 'month' || range.kind === 'lastmonth') {
+  const partial = !full && end < r.to;
+  if (range.kind === 'month') {
     const pym = addMonths(r.from.slice(0, 7), -1), pb = monthBounds(pym);
+    if (!partial) return { from: pb.first, to: pb.last, label: monthLabel(pym) };
     const dayN = Math.min(Number(end.slice(8, 10)), Number(pb.last.slice(8, 10)));
-    const partial = end < r.to;
-    return { from: pb.first, to: pym + '-' + String(dayN).padStart(2, '0'), label: partial ? 'the same days last month' : monthLabel(pym) };
+    return { from: pb.first, to: pym + '-' + String(dayN).padStart(2, '0'), label: 'the same days last month', short: monthShort(pym) };
   }
   if (range.kind === 'year') {
     const py = String(Number(r.from.slice(0, 4)) - 1);
-    return { from: py + '-01-01', to: py + end.slice(4), label: 'the same point last year' };
+    return partial ? { from: py + '-01-01', to: py + end.slice(4), label: 'the same point last year', short: py } : { from: py + '-01-01', to: py + '-12-31', label: py, short: py };
+  }
+  if (range.kind === 'week') {
+    const n = partial ? daysBetween(r.from, end) + 1 : 7;
+    return { from: shiftDays(r.from, -7), to: shiftDays(r.from, n - 8), label: partial ? 'the same days last week' : 'the week before', short: 'last week' };
   }
   const n = daysBetween(r.from, end) + 1;
-  return { from: shiftDays(r.from, -n), to: shiftDays(r.from, -1), label: 'the ' + n + ' days before' };
+  return { from: shiftDays(r.from, -n), to: shiftDays(r.from, -1), label: 'the ' + n + ' days before', short: 'before' };
 }
 function spendRows(from, to) { return cache.entries.filter(e => e.type === 'expense' && e.date >= from && e.date <= to); }
+function incomeRows(from, to) { return cache.entries.filter(e => e.type === 'income' && e.date >= from && e.date <= to); }
 function inBase(e, b) { return conv(e.amount, e.currency || 'GBP', b); }
 function sumBase(rows, b) { return rows.reduce((a, e) => { const v = inBase(e, b); return a + (Number.isFinite(v) ? v : 0); }, 0); }
 
+/* ── filters: categories and subcategories, kept per mode, and a search ── */
+let anFilter = load('ledger.anFilter', {});
+let anQ = '', anDay = null, anSort = 'new', anLimit = 30, anQTimer = null;
+const SUBSEP = ' › ';
+const subKey = (c, sub) => (c || 'Other') + SUBSEP + sub;
+function fState() {
+  const k = anMode === 'income' ? 'income' : 'spend';
+  if (!anFilter[k]) anFilter[k] = { cats: [], subs: [] };
+  return anFilter[k];
+}
+function setFilter(cats, subs) { const f = fState(); f.cats = cats; f.subs = subs; save('ledger.anFilter', anFilter); anDay = null; anLimit = 30; renderAnalysis(); }
+const catOn = () => { const f = fState(); return f.cats.length + f.subs.length > 0; };
+function matchCat(e) {
+  const f = fState();
+  if (!f.cats.length && !f.subs.length) return true;
+  return f.cats.includes(e.category || 'Other') || (e.subcategory && f.subs.includes(subKey(e.category, e.subcategory)));
+}
+function matchQ(e) {
+  if (!anQ) return true;
+  const q = anQ.toLowerCase();
+  return [e.description, e.category, e.subcategory, e.category === 'Trip' ? tripOf(e)?.name : ''].join(' ').toLowerCase().includes(q);
+}
+const matchAll = e => matchCat(e) && matchQ(e);
+/* the one category everything is filtered to, if there is one */
+function oneCat() {
+  const f = fState();
+  const cs = new Set([...f.cats, ...f.subs.map(x => x.split(SUBSEP)[0])]);
+  return cs.size === 1 ? [...cs][0] : null;
+}
+function filterItems() {
+  const f = fState();
+  return [...f.cats.map(c => ({ emoji: CAT_EMOJI[c] || '📦', name: c })), ...f.subs.map(x => { const [c, sub] = x.split(SUBSEP); return { emoji: SUB_EMOJI[sub] || CAT_EMOJI[sub] || CAT_EMOJI[c] || '📦', name: sub }; })];
+}
+const filterText = () => filterItems().map(x => x.name).join(', ');
+/* every category with its subcategories, from your lists and from what you logged */
+function catTree(type) {
+  const tree = new Map();
+  (type === 'expense' ? EXPENSE_CATS : INCOME_CATS).forEach(c => tree.set(c, new Set(c === 'Trip' ? [] : (SUBCATS[c] || []))));
+  cache.entries.filter(e => e.type === type).forEach(e => {
+    const c = e.category || 'Other';
+    if (!tree.has(c)) tree.set(c, new Set());
+    if (e.subcategory) tree.get(c).add(e.subcategory);
+  });
+  return tree;
+}
+
+/* ── the page ── */
 function renderAnalysis() {
   const root = beginView('analysis');
-  root.appendChild(pageHead('analysis', null));
   const b = base(), ready = ratesReady();
   const r = currentRange(), end = effTo(r);
+  const isInc = anMode === 'income', type = isInc ? 'income' : 'expense';
 
-  /* filters */
-  const presets = [['week', 'This week'], ['last7', 'Last 7 days'], ['month', 'This month'], ['lastmonth', 'Last month'], ['last30', '30 days'], ['last90', '90 days'], ['year', 'This year'], ['all', 'All time'], ['custom', 'Custom']];
-  const chips = h('div', { class: 'scroller', role: 'radiogroup', 'aria-label': 'Time period' }, presets.map(([k, l]) =>
-    h('button', { class: 'pill' + (range.kind === k ? ' on' : ''), role: 'radio', 'aria-checked': range.kind === k, onclick: () => {
-      range.kind = k;
-      if (k === 'custom' && !range.from) { const c = currentRange(); range.from = c.from; range.to = c.to; }
-      save('ledger.range', range); renderAnalysis();
-    } }, l)));
-  const modeSeg = h('div', { class: 'mode-switch' }, seg([['spend', '💸 Spending'], ['income', '💰 Income']], anMode, v => { anMode = v; save('ledger.anMode', v); renderAnalysis(); }, { full: true }));
-  const filters = h('div', { class: 'filters' }, modeSeg, chips);
-  if (range.kind === 'custom') {
-    const f = h('input', { class: 'input', type: 'date', value: range.from || '' }), tt = h('input', { class: 'input', type: 'date', value: range.to || '' });
-    filters.appendChild(h('div', { class: 'price-line' }, field('From', f), field('To', tt),
-      h('button', { class: 'btn btn-ghost', onclick: () => {
-        if (!f.value || !tt.value) return toast('Pick both dates', 'error');
-        if (f.value > tt.value) return toast('The start date is after the end date', 'error');
-        range.from = f.value; range.to = tt.value; save('ledger.range', range); renderAnalysis();
-      } }, 'Apply')));
-  }
-  filters.appendChild(currencyBar());
-  root.appendChild(filters);
+  root.appendChild(h('div', { class: 'page-head' },
+    h('h1', { class: 'page-title' }, h('span', { class: 'emo', 'aria-hidden': 'true' }, VIEWS.analysis.emoji), VIEWS.analysis.title),
+    h('div', { class: 'mode-switch an-mode' }, seg([['spend', '💸 Spending'], ['income', '💰 Income']], anMode, v => { anMode = v; save('ledger.anMode', v); anDay = null; anLimit = 30; renderAnalysis(); }, { full: true }))));
 
-  const n = Math.max(0, daysBetween(r.from, end) + 1);
-  const rows = cache.entries.filter(e => e.date >= r.from && e.date <= r.to);
-  root.appendChild(h('div', { class: 'caption', style: { marginBottom: '18px' } },
-    fmtDate(r.from) + ' to ' + fmtDate(r.to) + ', ' + rows.length + (rows.length === 1 ? ' entry' : ' entries')));
+  root.appendChild(timePicker(r));
+  root.appendChild(h('div', { class: 'an-tools' }, filterBar(type), currencyBar()));
+
+  const all = cache.entries.filter(e => e.type === type && e.date >= r.from && e.date <= r.to);
+  const rows = all.filter(matchAll);
+  root.appendChild(h('div', { class: 'caption an-caption' },
+    fmtDate(r.from) + ' to ' + fmtDate(r.to) + ', ' + rows.length + (rows.length === 1 ? (isInc ? ' payment' : ' expense') : (isInc ? ' payments' : ' expenses')) +
+    (catOn() || anQ ? ' match your filter, out of ' + all.length : '')));
 
   if (!ready) {
     root.appendChild(ratesCallout());
-    root.appendChild(separateSection(rows));
+    root.appendChild(separateSection(cache.entries.filter(e => e.date >= r.from && e.date <= r.to)));
     return;
   }
+  if (isInc) incomeDashboard(root, { r, end, b, rows, all });
+  else spendDashboard(root, { r, end, b, rows, all });
 
-  if (anMode === 'income') {
-    renderIncomeAnalysis(root, { r, end, b, rows });
-    root.appendChild(separateSection(rows));
-    root.appendChild(portfolioChecks(b));
-    return;
-  }
+  root.appendChild(separateSection(cache.entries.filter(e => e.date >= r.from && e.date <= r.to && matchAll(e))));
+  root.appendChild(portfolioChecks(b));
+}
 
-  /* KPIs */
-  const spend = spendRows(r.from, end);
-  const spent = sumBase(spend, b);
-  const income = sumBase(rows.filter(e => e.type === 'income'), b);
-  const prevR = previousRange(r);
-  const prevSpent = prevR ? sumBase(spendRows(prevR.from, prevR.to), b) : null;
-  const avgDay = n > 0 ? spent / n : 0;
-  const prevN = prevR ? daysBetween(prevR.from, prevR.to) + 1 : 0;
-  const prevAvg = prevR && prevN ? prevSpent / prevN : null;
-  const cats = categoryRows(spend, e => inBase(e, b));
-  const deltaChip = (now, before) => {
-    if (before === null || before === undefined) return null;
-    if (before <= 0) return now > 0 ? h('span', { class: 'chip neutral' }, 'nothing before') : null;
-    const d = (now - before) / before * 100;
-    if (Math.abs(d) < 1) return h('span', { class: 'chip neutral' }, 'about the same');
-    return h('span', { class: 'chip ' + (d > 0 ? 'bad' : 'good') }, (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(0) + '%');
+function timePicker(r) {
+  const kinds = h('div', { class: 'scroller an-kinds', role: 'radiogroup', 'aria-label': 'Kind of period' }, RANGE_KINDS.map(([k, l]) =>
+    h('button', { class: 'pill' + (range.kind === k ? ' on' : ''), role: 'radio', 'aria-checked': range.kind === k, onclick: () => {
+      if (range.kind === k) return;
+      if (k === 'custom' && !range.from) { range.from = r.from; range.to = effTo(r); }
+      range.kind = k; range.anchor = null; saveRange();
+    } }, l)));
+  let row;
+  if (['week', 'month', 'year'].includes(range.kind)) {
+    const back = { week: 'This week', month: 'This month', year: 'This year' }[range.kind];
+    row = h('div', { class: 'an-step' },
+      h('button', { class: 'nav-btn', 'aria-label': 'Previous ' + range.kind, onclick: () => stepRange(-1) }, '‹'),
+      h('div', { class: 'an-period', 'aria-live': 'polite' }, r.label),
+      h('button', { class: 'nav-btn', 'aria-label': 'Next ' + range.kind, disabled: r.current || null, onclick: () => stepRange(1) }, '›'),
+      !r.current ? h('button', { class: 'btn btn-soft sm', onclick: () => { range.anchor = null; saveRange(); } }, back) : null);
+  } else if (range.kind === 'roll') {
+    row = h('div', { class: 'an-step' }, h('div', { class: 'scroller', role: 'radiogroup', 'aria-label': 'How many days' }, ROLL_DAYS.map(n =>
+      h('button', { class: 'pill' + ((range.days || 30) === n ? ' on' : ''), role: 'radio', 'aria-checked': (range.days || 30) === n, onclick: () => { range.days = n; saveRange(); } }, n === 365 ? '1 year' : n + ' days'))));
+  } else if (range.kind === 'custom') {
+    const f = h('input', { class: 'input', type: 'date', value: r.from, max: todayStr(), 'aria-label': 'From' });
+    const t = h('input', { class: 'input', type: 'date', value: r.to, 'aria-label': 'To' });
+    const apply = () => { if (!f.value || !t.value) return; range.from = f.value <= t.value ? f.value : t.value; range.to = f.value <= t.value ? t.value : f.value; saveRange(); };
+    f.addEventListener('change', apply); t.addEventListener('change', apply);
+    row = h('div', { class: 'an-step an-custom' }, h('label', null, h('span', { class: 'caption' }, 'From'), f), h('label', null, h('span', { class: 'caption' }, 'To'), t));
+  } else row = h('div', { class: 'an-step' }, h('div', { class: 'an-period' }, 'Everything since ' + fmtDate(r.from)));
+  return h('div', { class: 'an-time' }, kinds, row);
+}
+
+function filterBar(type) {
+  const f = fState();
+  const n = f.cats.length + f.subs.length;
+  const search = h('input', { class: 'input an-search', id: 'anSearch', type: 'search', placeholder: '🔎 Search notes', value: anQ, 'aria-label': 'Search notes and categories', autocomplete: 'off' });
+  search.addEventListener('input', () => {
+    clearTimeout(anQTimer);
+    anQTimer = setTimeout(() => {
+      anQ = search.value.trim(); anLimit = 30;
+      const pos = search.selectionStart;
+      renderAnalysis();
+      const s2 = $('anSearch'); if (s2) { s2.focus(); try { s2.setSelectionRange(pos, pos); } catch { /* fine */ } }
+    }, 250);
+  });
+  const chips = filterItems().map(({ emoji, name }, i) => {
+    const isCat = i < f.cats.length;
+    return h('button', { class: 'chip-x', title: 'Remove this filter', onclick: () => {
+      if (isCat) setFilter(f.cats.filter((_, j) => j !== i), f.subs); else setFilter(f.cats, f.subs.filter((_, j) => j !== i - f.cats.length));
+    } }, h('span', { class: 'emo', 'aria-hidden': 'true' }, emoji), name, h('span', { 'aria-hidden': 'true' }, '✕'));
+  });
+  return h('div', { class: 'an-filter' },
+    h('div', { class: 'an-filter-row' },
+      search,
+      h('button', { class: 'btn ' + (n ? 'btn-soft' : 'btn-ghost') + ' sm an-cat-btn', onclick: () => openFilterSheet(type) }, '☰ Categories', n ? h('span', { class: 'm-count' }, String(n)) : null)),
+    n || anQ ? h('div', { class: 'an-chips' }, chips,
+      anQ ? h('button', { class: 'chip-x', onclick: () => { anQ = ''; renderAnalysis(); } }, '“' + anQ + '”', h('span', { 'aria-hidden': 'true' }, '✕')) : null,
+      h('button', { class: 'an-clear', onclick: () => { anQ = ''; setFilter([], []); } }, 'Clear all')) : null);
+}
+
+function openFilterSheet(type) {
+  const f = fState(), cats = new Set(f.cats), subs = new Set(f.subs);
+  const r = currentRange(), end = effTo(r), b = base();
+  const tree = catTree(type);
+  const inPeriod = cache.entries.filter(e => e.type === type && e.date >= r.from && e.date <= end);
+  const tot = new Map(), subTot = new Map();
+  inPeriod.forEach(e => {
+    const v = inBase(e, b); if (!Number.isFinite(v)) return;
+    const c = e.category || 'Other';
+    tot.set(c, (tot.get(c) || 0) + v);
+    if (e.subcategory) subTot.set(subKey(c, e.subcategory), (subTot.get(subKey(c, e.subcategory)) || 0) + v);
+  });
+  const order = [...tree.keys()].sort((x, y) => (tot.get(y) || 0) - (tot.get(x) || 0));
+  const open = new Set([...subs].map(x => x.split(SUBSEP)[0]));
+  const list = h('div', { class: 'ft-list' });
+  const countEl2 = h('span');
+  const paint = () => {
+    clear(list);
+    order.forEach(c => {
+      const kids = [...tree.get(c)].sort((x, y) => (subTot.get(subKey(c, y)) || 0) - (subTot.get(subKey(c, x)) || 0));
+      const all = cats.has(c), some = !all && kids.some(k => subs.has(subKey(c, k)));
+      const box = h('input', { type: 'checkbox', checked: all || null, 'aria-label': c });
+      box.indeterminate = some;
+      box.addEventListener('change', () => {
+        if (box.checked) { cats.add(c); kids.forEach(k => subs.delete(subKey(c, k))); } else cats.delete(c);
+        paint();
+      });
+      const v = tot.get(c) || 0;
+      list.appendChild(h('div', { class: 'ft-row' + (v ? '' : ' quiet') },
+        h('label', { class: 'ft-main' }, box, h('span', { class: 'emo', 'aria-hidden': 'true' }, CAT_EMOJI[c] || '📦'), h('span', { class: 'ft-name' }, c), h('span', { class: 'ft-val' }, v ? money(v, b) : '')),
+        kids.length ? h('button', { class: 'ft-open' + (open.has(c) ? ' on' : ''), 'aria-expanded': open.has(c), 'aria-label': 'Show kinds of ' + c, onclick: () => { open.has(c) ? open.delete(c) : open.add(c); paint(); } }, kids.length + ' ›') : null));
+      if (kids.length && open.has(c)) list.appendChild(h('div', { class: 'ft-subs' }, kids.map(k => {
+        const key = subKey(c, k), on = all || subs.has(key);
+        const sb = h('input', { type: 'checkbox', checked: on || null, 'aria-label': k });
+        sb.addEventListener('change', () => {
+          if (all) { cats.delete(c); kids.forEach(x => { if (x !== k) subs.add(subKey(c, x)); }); }
+          else if (sb.checked) { subs.add(key); if (kids.every(x => subs.has(subKey(c, x)))) { kids.forEach(x => subs.delete(subKey(c, x))); cats.add(c); } }
+          else subs.delete(key);
+          paint();
+        });
+        const sv = subTot.get(key) || 0;
+        return h('label', { class: 'ft-sub' + (sv ? '' : ' quiet') }, sb, h('span', { class: 'emo', 'aria-hidden': 'true' }, SUB_EMOJI[k] || CAT_EMOJI[k] || '•'), h('span', { class: 'ft-name' }, k), h('span', { class: 'ft-val' }, sv ? money(sv, b) : ''));
+      })));
+    });
+    const n = cats.size + subs.size;
+    countEl2.textContent = n ? 'Show ' + n + (n === 1 ? ' filter' : ' filters') : 'Show everything';
   };
+  paint();
+  openSheet('Filter by category', h('div', null,
+    h('div', { class: 'hint', style: { marginBottom: '12px' } }, 'Tick a category for all of it, or open it with › to pick its kinds. Amounts are for ' + r.label.replace(/^This/, 'this') + '.'),
+    h('div', { class: 'filter-line', style: { marginBottom: '10px' } },
+      h('button', { class: 'btn btn-ghost sm', onclick: () => { cats.clear(); subs.clear(); paint(); } }, 'Clear'),
+      h('button', { class: 'btn btn-ghost sm', onclick: () => { order.forEach(c => { if (tot.get(c)) cats.add(c); }); subs.clear(); paint(); } }, 'Tick all with spending')),
+    list),
+    { footer: h('button', { class: 'btn btn-primary block', onclick: () => { closeSheet(); setFilter([...cats], [...subs]); } }, countEl2) });
+}
 
+/* ── spending ── */
+function spendDashboard(root, { r, end, b, rows, all }) {
+  const upto = rows.filter(e => e.date <= end);
+  const spent = sumBase(upto, b), everything = sumBase(all.filter(e => e.date <= end), b);
+  const n = Math.max(0, daysBetween(r.from, end) + 1);
+  const prevR = previousRange(r);
+  const prevRows = prevR ? spendRows(prevR.from, prevR.to).filter(matchAll) : [];
+  const prevSpent = prevR ? sumBase(prevRows, b) : null;
+  const filtered = catOn() || !!anQ;
+
+  /* the big number */
+  const delta = deltaChip(spent, prevSpent, false);
   root.appendChild(h('div', { class: 'hero' },
-    h('div', { class: 'hero-label' }, periodPhrase(r)),
+    h('div', { class: 'hero-label' }, periodPhrase(r) + (filtered ? ' on ' + (catOn() ? filterText() : 'matches') : '')),
     h('div', { class: 'hero-nums' }, countEl(spent, v => money(v, b))),
-    h('div', { class: 'hero-sub' }, deltaChip(spent, prevSpent), prevR ? h('span', null, 'compared with ' + prevR.label) : null)));
+    h('div', { class: 'hero-sub' }, delta, prevR ? h('span', null, 'compared with ' + prevR.label) : null,
+      filtered && everything > 0 ? h('span', { class: 'chip neutral' }, Math.round(spent / everything * 100) + '% of all spending') : null)));
 
+  /* key numbers */
+  const avgDay = n ? spent / n : 0;
+  const prevN = prevR ? daysBetween(prevR.from, prevR.to) + 1 : 0;
+  const vals = upto.map(e => ({ e, v: inBase(e, b) })).filter(x => Number.isFinite(x.v));
+  const big = vals.reduce((m, x) => !m || x.v > m.v ? x : m, null);
+  const daysWith = new Set(upto.map(e => e.date)).size;
+  let fourth;
+  if (range.kind === 'month' && r.current && n > 0) {
+    const dim = Number(r.to.slice(8, 10)), proj = spent / n * dim;
+    const pm = monthBounds(addMonths(r.from.slice(0, 7), -1)), last = sumBase(spendRows(pm.first, pm.last).filter(matchAll), b);
+    fourth = stat('On track for', money(proj, b), 'by ' + shortDate(r.to) + (last > 0 ? ', ' + monthShort(pm.first.slice(0, 7)) + ' was ' + money(last, b) : ' at this pace'));
+  } else fourth = stat('Days with spending', daysWith + ' of ' + n, n ? Math.round(daysWith / n * 100) + '% of days' : '');
   root.appendChild(h('div', { class: 'stats four' },
-    stat('Per day', money(avgDay, b), prevAvg !== null ? 'was ' + money(prevAvg, b) : 'over ' + n + ' days'),
-    stat('Income', money(income, b), 'in this period'),
-    stat('Biggest category', cats[0] ? cats[0].emoji + ' ' + cats[0].label : '—', cats[0] ? money(cats[0].value, b) + ', ' + Math.round(cats[0].value / (spent || 1) * 100) + '% of spending' : ''),
-    stat('Days with spending', String(new Set(spend.map(e => e.date)).size) + ' of ' + n, n ? Math.round(new Set(spend.map(e => e.date)).size / n * 100) + '% of days' : '')));
+    stat('Per day', money(avgDay, b), prevR && prevN ? 'was ' + money(prevSpent / prevN, b) : 'over ' + n + (n === 1 ? ' day' : ' days')),
+    stat('Expenses', String(upto.length), upto.length ? money(spent / upto.length, b) + ' on average' : 'none'),
+    stat('Biggest one', big ? money(big.v, b) : '—', big ? (big.e.description || big.e.category) + ', ' + shortDate(big.e.date) : ''),
+    fourth));
 
-  /* spending over time */
+  if (!upto.length && !rows.length) {
+    root.appendChild(h('div', { class: 'list' }, empty('🔍', filtered ? 'Nothing matches your filter in this period.' : 'Nothing spent in this period.', filtered ? { label: 'Clear filters', onclick: () => { anQ = ''; setFilter([], []); } } : null)));
+    return;
+  }
+
+  /* over time, and the pace against last time */
   const byDate = new Map();
-  spend.forEach(e => { const v = inBase(e, b); if (Number.isFinite(v)) byDate.set(e.date, (byDate.get(e.date) || 0) + v); });
+  upto.forEach(e => { const v = inBase(e, b); if (Number.isFinite(v)) byDate.set(e.date, (byDate.get(e.date) || 0) + v); });
   const bk = buckets(r.from, end, byDate);
   if (bk.items.length) {
     const avg = bk.items.reduce((a, x) => a + x.value, 0) / bk.items.length;
-    root.appendChild(section('Spending ' + bk.unitTitle, 'The line is your average ' + bk.unit + '. Bars above it are your heavier ' + bk.unit + 's.',
+    const pick = bk.unit === 'day' ? i => { anDay = bk.items[i].date; anLimit = 30; renderAnalysis(); $('anList')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      : bk.unit === 'week' ? i => zoomTo('week', bk.items[i].date) : i => zoomTo('month', bk.items[i].date);
+    root.appendChild(section('Spending ' + bk.unitTitle, 'The line is your average ' + bk.unit + '. ' + (finePointer() ? 'Click' : 'Tap twice on') + ' a bar to ' + (bk.unit === 'day' ? 'see that day.' : 'zoom into that ' + bk.unit + '.'),
       h('div', { class: 'panel' },
         h('div', { class: 'chart-key' }, h('i', { 'aria-hidden': 'true' }), 'Average ' + money(avg, b) + ' a ' + bk.unit),
-        columnChart({ items: bk.items, cur: b, avg, label: 'Spending ' + bk.unitTitle }))));
+        columnChart({ items: bk.items, cur: b, avg, label: 'Spending ' + bk.unitTitle, onPick: pick }))));
   }
-
-  /* categories with change */
-  const prevCats = prevR ? new Map(categoryRows(spendRows(prevR.from, prevR.to), e => inBase(e, b)).map(c => [c.key, c.value])) : null;
-  root.appendChild(section('Where it went', prevR ? 'Arrows compare each category with ' + prevR.label + '. Red means you spent more.' : null,
-    h('div', { class: 'panel' }, catBars(cats, b, { prev: prevCats, max: 12 }))));
-
-  /* weekday + calendar */
-  const twoUp = h('div', { class: 'grid-2 even' });
-  const wkSum = [0, 0, 0, 0, 0, 0, 0], wkCount = [0, 0, 0, 0, 0, 0, 0];
-  for (let d = r.from; d <= end; d = shiftDays(d, 1)) { const i = weekdayIndex(d); wkCount[i]++; wkSum[i] += byDate.get(d) || 0; }
-  const wkAvg = wkSum.map((v, i) => wkCount[i] ? v / wkCount[i] : 0);
-  const wkMax = Math.max(...wkAvg);
-  if (n >= 7 && wkMax > 0) {
-    const top = wkAvg.indexOf(wkMax);
-    twoUp.appendChild(h('section', { class: 'section', style: { margin: 0 } },
-      h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, 'By day of the week'),
-        h('div', { class: 'section-note' }, 'You spend most on ' + ['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'][top] + ', about ' + money(wkMax, b) + ' on average.'))),
-      h('div', { class: 'panel' }, columnChart({ items: wkAvg.map((v, i) => ({ label: WEEKDAYS[i], title: 'Average ' + WEEKDAYS[i], value: v, highlight: i === top, note: 'on average' })), cur: b, emphasis: true, labelHighlight: true, height: 190, label: 'Average spending by weekday' }))));
-  }
-  const span = daysBetween(r.from, r.to) + 1;
-  if (span <= 92 && end >= r.from) {
-    twoUp.appendChild(h('section', { class: 'section', style: { margin: 0 } },
-      h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, 'Calendar'), h('div', { class: 'section-note' }, 'Darker days are the days you spent more.'))),
-      h('div', { class: 'panel' }, heatCalendar(r.from, r.to, end, byDate, b))));
-  }
-  if (twoUp.childNodes.length) root.appendChild(h('div', { class: 'section' }, twoUp));
-
-  /* month by month */
-  const endYm = end.slice(0, 7);
-  const months = [];
-  for (let i = 5; i >= 0; i--) {
-    const ym = addMonths(endYm, -i), mb = monthBounds(ym);
-    const v = sumBase(spendRows(mb.first, mb.last), b);
-    months.push({ label: monthShort(ym), title: monthLabel(ym), value: v, highlight: i === 0, note: i === 0 && ym === todayStr().slice(0, 7) ? 'so far' : '' });
-  }
-  if (months.some(m => m.value > 0)) {
-    root.appendChild(section('Month by month', 'The six months up to ' + monthLabel(endYm) + '.',
-      h('div', { class: 'panel' }, columnChart({ items: months, cur: b, emphasis: true, labelHighlight: true, height: 200, label: 'Spending by month' }))));
-  }
-
-  root.appendChild(separateSection(rows));
-  root.appendChild(portfolioChecks(b));
-}
-function incomeRows(from, to) { return cache.entries.filter(e => e.type === 'income' && e.date >= from && e.date <= to); }
-function incomePhrase(r) { return periodPhrase(r).replace(/^Spent/, 'Income'); }
-function renderIncomeAnalysis(root, { r, end, b, rows }) {
-  const inc = incomeRows(r.from, end), spend = spendRows(r.from, end);
-  const income = sumBase(inc, b), spent = sumBase(spend, b), left = income - spent;
-  const prevR = previousRange(r);
-  const prevIncome = prevR ? sumBase(incomeRows(prevR.from, prevR.to), b) : null;
-  const sources = categoryRows(inc, e => inBase(e, b));
-  const rate = income > 0 ? left / income * 100 : null;
-
-  let delta = null;
-  if (prevIncome !== null) {
-    if (prevIncome <= 0) delta = income > 0 ? h('span', { class: 'chip neutral' }, 'nothing before') : null;
-    else {
-      const d = (income - prevIncome) / prevIncome * 100;
-      delta = Math.abs(d) < 1 ? h('span', { class: 'chip neutral' }, 'about the same')
-        : h('span', { class: 'chip ' + (d > 0 ? 'good' : 'bad') }, (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(0) + '%');
+  const fullPrev = previousRange(r, true);
+  if (fullPrev && range.kind !== 'all' && daysBetween(r.from, r.to) >= 4) {
+    const pace = paceSeries(r, end, fullPrev, b);
+    if (pace.now.length > 1 || pace.before.some(v => v > 0)) {
+      const i = pace.now.length - 1, gap = pace.now[i] - (pace.before[Math.min(i, pace.before.length - 1)] || 0);
+      const tag = fullPrev.short || fullPrev.label;
+      const lead = r.current && end < r.to ? 'So far you are ' : 'You ended ';
+      root.appendChild(section('Pace', Math.abs(gap) < 0.5 ? lead + 'level with the same point in ' + tag + '.' : lead + money(Math.abs(gap), b) + (gap > 0 ? ' above ' : ' below ') + 'where you were at the same point in ' + tag + '.',
+        h('div', { class: 'panel' },
+          h('div', { class: 'chart-key legend2' },
+            h('span', { class: 'sw' }, h('b', { style: { background: 'var(--accent)' } }), r.label),
+            h('span', { class: 'sw' }, h('b', { class: 'dash' }), fullPrev.label)),
+          paceChart({ now: pace.now, before: pace.before, from: r.from, prevFrom: fullPrev.from, cur: b, nowName: r.label, beforeName: fullPrev.label }))));
     }
   }
-  root.appendChild(h('div', { class: 'hero' },
-    h('div', { class: 'hero-label' }, incomePhrase(r)),
-    h('div', { class: 'hero-nums' }, countEl(income, v => money(v, b))),
-    h('div', { class: 'hero-sub' }, delta, prevR ? h('span', null, 'compared with ' + prevR.label) : null)));
 
-  root.appendChild(h('div', { class: 'stats four' },
-    stat('Spent', money(spent, b), 'in this period'),
-    stat('Left over', h('span', { class: left >= 0 ? 'pos' : 'neg' }, signed(left, b)), left >= 0 ? 'income minus spending' : 'you spent more than came in'),
-    stat('Kept', rate === null ? '—' : Math.round(rate) + '%', rate === null ? 'no income in this period' : rate >= 0 ? 'of your income was not spent' : 'spending went over income'),
-    stat('Biggest source', sources[0] ? sources[0].emoji + ' ' + sources[0].label : '—', sources[0] ? money(sources[0].value, b) + ', ' + Math.round(sources[0].value / (income || 1) * 100) + '% of income' : '')));
+  /* where it went, click to zoom into a category */
+  const one = oneCat();
+  const twoA = h('div', { class: 'grid-2 even' });
+  let bars;
+  if (one) {
+    const subRows = categoryRows(upto.map(e => ({ ...e, category: e.subcategory || 'No kind given', subcategory: null })), e => inBase(e, b))
+      .map(x => ({ ...x, emoji: SUB_EMOJI[x.key] || CAT_EMOJI[x.key] || CAT_EMOJI[one] || '📦' }));
+    const prevSub = prevR ? new Map(categoryRows(prevRows.map(e => ({ ...e, category: e.subcategory || 'No kind given', subcategory: null })), e => inBase(e, b)).map(c => [c.key, c.value])) : null;
+    bars = sectionWith('Inside ' + one, 'Click a kind to see only that.', h('button', { class: 'btn btn-ghost sm', onclick: () => setFilter([], []) }, '‹ All categories'),
+      h('div', { class: 'panel' }, catBars(subRows, b, { prev: prevSub, max: 12, onPick: x => x.key === 'No kind given' ? null : setFilter([], [subKey(one, x.key)]), active: new Set(fState().subs.map(s2 => s2.split(SUBSEP)[1])) })));
+  } else {
+    const cats = categoryRows(upto, e => inBase(e, b));
+    const prevCats = prevR ? new Map(categoryRows(prevRows, e => inBase(e, b)).map(c => [c.key, c.value])) : null;
+    bars = section('Where it went', (prevR ? 'Arrows compare with ' + prevR.label + '. ' : '') + (finePointer() ? 'Click' : 'Tap') + ' a category to look inside it.',
+      h('div', { class: 'panel' }, catBars(cats, b, { prev: prevCats, max: 12, onPick: x => x.key === '__rest' ? openFilterSheet('expense') : setFilter([x.key], []) })));
+  }
+  bars.style.margin = 0;
+  twoA.appendChild(bars);
+  /* biggest expenses */
+  const top = vals.sort((x, y) => y.v - x.v).slice(0, 8);
+  twoA.appendChild(h('section', { class: 'section', style: { margin: 0 } },
+    h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, 'Biggest expenses'), h('div', { class: 'section-note' }, 'The ' + top.length + ' largest in this period.'))),
+    h('div', { class: 'list' }, top.map((x, i) => h('div', { class: 'row no-del top-row' },
+      h('span', { class: 'top-rank' }, String(i + 1)),
+      h('div', { class: 'bubble emo', 'aria-hidden': 'true' }, emojiFor(x.e)),
+      h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, x.e.description || x.e.category), h('div', { class: 'row-sub' }, shortDate(x.e.date) + ', ' + catLabel(x.e))),
+      h('div', { class: 'amt' }, money(x.v, b)))))));
+  root.appendChild(h('div', { class: 'section' }, twoA));
 
-  const prevSrc = prevR ? new Map(categoryRows(incomeRows(prevR.from, prevR.to), e => inBase(e, b)).map(c => [c.key, c.value])) : null;
-  root.appendChild(section('Where it came from', prevR ? 'Arrows compare each source with ' + prevR.label + '. Green means more came in.' : null,
-    h('div', { class: 'panel' }, catBars(sources, b, { prev: prevSrc, max: 8, upIsGood: true, emptyText: 'No income logged in this period.', fillColor: 'var(--c3)' }))));
+  /* habits: weekday and calendar */
+  const twoB = h('div', { class: 'grid-2 even' });
+  const wkSum = [0, 0, 0, 0, 0, 0, 0], wkCount = [0, 0, 0, 0, 0, 0, 0];
+  for (let d = r.from; d <= end; d = shiftDays(d, 1)) { const i = weekdayIndex(d); wkCount[i]++; wkSum[i] += byDate.get(d) || 0; }
+  const wkAvg = wkSum.map((v, i) => wkCount[i] ? v / wkCount[i] : 0), wkMax = Math.max(...wkAvg);
+  if (n >= 7 && wkMax > 0) {
+    const topD = wkAvg.indexOf(wkMax);
+    const wkEnd = (wkAvg[5] + wkAvg[6]) / 2, wkDay = wkAvg.slice(0, 5).reduce((a, v) => a + v, 0) / 5;
+    twoB.appendChild(h('section', { class: 'section', style: { margin: 0 } },
+      h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, 'By day of the week'),
+        h('div', { class: 'section-note' }, 'Most on ' + ['Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays', 'Sundays'][topD] + ', about ' + money(wkMax, b) + '. ' +
+          (wkDay > 0 ? 'Weekend days cost ' + (wkEnd >= wkDay ? Math.round((wkEnd / wkDay - 1) * 100) + '% more' : Math.round((1 - wkEnd / wkDay) * 100) + '% less') + ' than weekdays.' : '')))),
+      h('div', { class: 'panel' }, columnChart({ items: wkAvg.map((v, i) => ({ label: WEEKDAYS[i], title: 'Average ' + WEEKDAYS[i], value: v, highlight: i === topD, note: 'on average' })), cur: b, emphasis: true, labelHighlight: true, height: 190, label: 'Average spending by weekday' }))));
+  }
+  if (daysBetween(r.from, r.to) + 1 <= 92 && end >= r.from) {
+    twoB.appendChild(h('section', { class: 'section', style: { margin: 0 } },
+      h('div', { class: 'section-head' }, h('div', null, h('h2', { class: 'section-title' }, 'Calendar'), h('div', { class: 'section-note' }, 'Darker days cost more. ' + (finePointer() ? 'Click' : 'Tap twice on') + ' a day to see it.'))),
+      h('div', { class: 'panel' }, heatCalendar(r.from, r.to, end, byDate, b, d => { anDay = d; anLimit = 30; renderAnalysis(); $('anList')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, anDay))));
+  }
+  if (twoB.childNodes.length) root.appendChild(h('div', { class: 'section' }, twoB));
 
-  /* six months of income next to spending */
+  /* twelve months, with the same filter */
   const endYm = end.slice(0, 7), months = [];
-  for (let i = 5; i >= 0; i--) {
+  for (let i = 11; i >= 0; i--) {
+    const ym = addMonths(endYm, -i), mb = monthBounds(ym);
+    months.push({ label: monthShort(ym), title: monthLabel(ym), date: ym + '-15', value: sumBase(spendRows(mb.first, mb.last).filter(matchAll), b), highlight: i === 0, note: ym === todayStr().slice(0, 7) ? 'so far' : '' });
+  }
+  if (months.some(m => m.value > 0)) {
+    const full = months.slice(0, -1).filter(m => m.value > 0), avgM = full.length ? full.reduce((a, m) => a + m.value, 0) / full.length : 0;
+    root.appendChild(section('Month by month', 'The 12 months up to ' + monthLabel(endYm) + (avgM ? '. A usual month is about ' + money(avgM, b) + '.' : '.') + ' ' + (finePointer() ? 'Click' : 'Tap twice on') + ' a month to open it.',
+      h('div', { class: 'panel' }, columnChart({ items: months, cur: b, emphasis: true, labelHighlight: true, height: 210, avg: avgM || null, label: 'Spending by month', onPick: i => zoomTo('month', months[i].date) }))));
+  }
+
+  root.appendChild(entryList(rows, b, 'expense'));
+}
+
+/* ── income ── */
+function incomeDashboard(root, { r, end, b, rows, all }) {
+  const upto = rows.filter(e => e.date <= end);
+  const income = sumBase(upto, b), spent = sumBase(spendRows(r.from, end), b), left = sumBase(all.filter(e => e.date <= end), b) - spent;
+  const prevR = previousRange(r);
+  const prevIncome = prevR ? sumBase(incomeRows(prevR.from, prevR.to).filter(matchAll), b) : null;
+  const sources = categoryRows(upto, e => inBase(e, b));
+  const totalIn = sumBase(all.filter(e => e.date <= end), b);
+  const rate = totalIn > 0 ? left / totalIn * 100 : null;
+  root.appendChild(h('div', { class: 'hero' },
+    h('div', { class: 'hero-label' }, periodPhrase(r, 'Income') + (catOn() ? ' from ' + filterText() : '')),
+    h('div', { class: 'hero-nums' }, countEl(income, v => money(v, b))),
+    h('div', { class: 'hero-sub' }, deltaChip(income, prevIncome, true), prevR ? h('span', null, 'compared with ' + prevR.label) : null)));
+  root.appendChild(h('div', { class: 'stats four' },
+    stat('Spent', money(spent, b), 'all spending in this period'),
+    stat('Left over', h('span', { class: left >= 0 ? 'pos' : 'neg' }, signed(left, b)), left >= 0 ? 'all income minus spending' : 'you spent more than came in'),
+    stat('Kept', rate === null ? '—' : Math.round(rate) + '%', rate === null ? 'no income in this period' : rate >= 0 ? 'of your income was not spent' : 'spending went over income'),
+    stat('Biggest source', sources[0] ? sources[0].emoji + ' ' + sources[0].label : '—', sources[0] ? money(sources[0].value, b) + ', ' + Math.round(sources[0].value / (income || 1) * 100) + '%' : '')));
+  const prevSrc = prevR ? new Map(categoryRows(incomeRows(prevR.from, prevR.to).filter(matchAll), e => inBase(e, b)).map(c => [c.key, c.value])) : null;
+  root.appendChild(section('Where it came from', (prevR ? 'Arrows compare with ' + prevR.label + '. Green means more came in. ' : '') + (finePointer() ? 'Click' : 'Tap') + ' a source to see only that.',
+    h('div', { class: 'panel' }, catBars(sources, b, { prev: prevSrc, max: 10, upIsGood: true, emptyText: 'No income in this period.', fillColor: 'var(--c3)', onPick: x => x.key === '__rest' ? openFilterSheet('income') : setFilter(oneCat() === x.key ? [] : [x.key], []) }))));
+  const endYm = end.slice(0, 7), months = [];
+  for (let i = 11; i >= 0; i--) {
     const ym = addMonths(endYm, -i), mb = monthBounds(ym);
     months.push({ label: monthShort(ym), title: monthLabel(ym) + (ym === todayStr().slice(0, 7) ? ', so far' : ''),
-      a: sumBase(incomeRows(mb.first, mb.last), b), b: sumBase(spendRows(mb.first, mb.last), b) });
+      a: sumBase(incomeRows(mb.first, mb.last).filter(matchAll), b), b: sumBase(spendRows(mb.first, mb.last), b) });
   }
   if (months.some(m => m.a > 0 || m.b > 0)) {
-    const totA = months.reduce((x, m) => x + m.a, 0), totB = months.reduce((x, m) => x + m.b, 0);
-    const avgLeft = (totA - totB) / months.length;
-    root.appendChild(section('In and out, month by month',
-      'The six months up to ' + monthLabel(endYm) + '. On average ' + (avgLeft >= 0 ? signed(avgLeft, b) + ' a month was left over.' : 'you spent ' + money(-avgLeft, b) + ' a month more than came in.') +
-      ' Big payments like the scholarship arrive in chunks, so one month can look much better than the next.',
+    const totA = months.reduce((x, m) => x + m.a, 0), totB = months.reduce((x, m) => x + m.b, 0), avgLeft = (totA - totB) / months.length;
+    root.appendChild(section('In and out, month by month', 'The 12 months up to ' + monthLabel(endYm) + '. ' + (catOn() ? 'Income shows only your filter. ' : 'On average ' + (avgLeft >= 0 ? signed(avgLeft, b) + ' a month was left over.' : 'you spent ' + money(-avgLeft, b) + ' a month more than came in.')),
       h('div', { class: 'panel' },
         h('div', { class: 'chart-key legend2' },
           h('span', { class: 'sw' }, h('b', { style: { background: 'var(--c3)' } }), '💰 Income'),
           h('span', { class: 'sw' }, h('b', { style: { background: 'var(--c2)' } }), '💸 Spending')),
         pairedChart({ items: months, cur: b, aName: 'Income', bName: 'Spending', aColor: 'var(--c3)', bColor: 'var(--c2)', label: 'Income and spending by month' }))));
   }
-
-  /* each payment, newest first */
-  const list = inc.slice().sort((x, y) => (y.date + (y.created_at || '')).localeCompare(x.date + (x.created_at || ''))).slice(0, 12);
-  root.appendChild(section('Payments in', inc.length > 12 ? 'The latest 12 of ' + inc.length + '.' : null,
-    list.length ? h('div', { class: 'list' }, list.map(e => h('div', { class: 'row no-del' },
-      h('div', { class: 'bubble in emo', 'aria-hidden': 'true' }, CAT_EMOJI[e.category] || '💰'),
-      h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, e.description || e.category || 'Income'), h('div', { class: 'row-sub' }, fmtDate(e.date) + ' · ' + (e.category || 'Other'))),
-      h('div', null, h('div', { class: 'amt in' }, '+' + money(e.amount, e.currency || 'GBP')),
-        (e.currency || 'GBP') !== b ? h('div', { class: 'amt-sub' }, fmtShown(e.amount, e.currency || 'GBP')) : null))))
-    : h('div', { class: 'list' }, empty('💰', 'No income logged in this period.'))));
+  root.appendChild(entryList(rows, b, 'income'));
 }
+
+function deltaChip(now, before, upIsGood) {
+  if (before === null || before === undefined) return null;
+  if (before <= 0) return now > 0 ? h('span', { class: 'chip neutral' }, 'nothing before') : null;
+  const d = (now - before) / before * 100;
+  if (Math.abs(d) < 1) return h('span', { class: 'chip neutral' }, 'about the same');
+  return h('span', { class: 'chip ' + ((d > 0) === upIsGood ? 'good' : 'bad') }, (d > 0 ? '▲ ' : '▼ ') + Math.abs(d).toFixed(0) + '%');
+}
+
+/* every matching entry, newest or biggest first */
+function entryList(rows, b, type) {
+  let list = anDay ? rows.filter(e => e.date === anDay) : rows;
+  const val = e => { const v = inBase(e, b); return Number.isFinite(v) ? v : 0; };
+  list = list.slice().sort(anSort === 'big' ? (x, y) => val(y) - val(x) : (x, y) => (y.date + (y.created_at || '')).localeCompare(x.date + (x.created_at || '')));
+  const shown = list.slice(0, anLimit);
+  const body = h('div', { class: 'list' });
+  if (!list.length) body.appendChild(empty('🔍', 'Nothing here.'));
+  else if (anSort === 'new' && !anDay) {
+    let last = null;
+    shown.forEach(e => {
+      if (e.date !== last) {
+        last = e.date;
+        const day = list.filter(x => x.date === e.date);
+        body.appendChild(h('div', { class: 'group-head' }, h('span', null, dayTitle(e.date)), h('span', { class: 'gtot' }, money(day.reduce((a, x) => a + val(x), 0), b))));
+      }
+      body.appendChild(entryRow(e));
+    });
+  } else shown.forEach(e => body.appendChild(entryRow(e)));
+  if (list.length > shown.length) body.appendChild(h('button', { class: 'more-btn', onclick: () => { anLimit += 50; renderAnalysis(); } }, 'Show ' + Math.min(50, list.length - shown.length) + ' more of ' + list.length));
+  const total = list.reduce((a, e) => a + val(e), 0);
+  const sec = sectionWith(type === 'income' ? 'Every payment' : 'Every expense',
+    list.length + (list.length === 1 ? ' entry, ' : ' entries, ') + money(total, b) + (anDay ? ' on ' + fmtDay(anDay) : ''),
+    h('div', { class: 'filter-line' },
+      anDay ? h('button', { class: 'chip-x', onclick: () => { anDay = null; renderAnalysis(); } }, fmtDay(anDay), h('span', { 'aria-hidden': 'true' }, '✕')) : null,
+      seg([['new', 'Newest'], ['big', 'Biggest']], anSort, v => { anSort = v; anLimit = 30; renderAnalysis(); })),
+    body);
+  sec.id = 'anList';
+  return sec;
+}
+
+/* running total this period against the period before, day by day */
+function paceSeries(r, end, prev, b) {
+  const cum = (from, to, stop) => {
+    const byD = new Map();
+    spendRows(from, to).filter(matchAll).forEach(e => { const v = inBase(e, b); if (Number.isFinite(v)) byD.set(e.date, (byD.get(e.date) || 0) + v); });
+    const out = []; let run = 0;
+    for (let d = from; d <= stop; d = shiftDays(d, 1)) { run += byD.get(d) || 0; out.push(run); }
+    return out;
+  };
+  return { now: cum(r.from, r.to, end), before: cum(prev.from, prev.to, prev.to) };
+}
+function paceChart({ now, before, from, prevFrom, cur, nowName, beforeName, height = 220 }) {
+  return chart((W, H, box) => {
+    const padL = 52, padR = 14, padT = 14, padB = 26;
+    const iw = W - padL - padR, ih = H - padT - padB;
+    const len = Math.max(now.length, before.length);
+    const max = Math.max(1, ...now, ...before);
+    const step = niceStep(max, 3), yMax = Math.ceil(max / step) * step;
+    const x = i => padL + (len <= 1 ? iw / 2 : i / (len - 1) * iw);
+    const y = v => padT + ih - v / yMax * ih;
+    const svg = s('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}` });
+    for (let t = 0; t <= yMax + 1e-9; t += step) {
+      svg.appendChild(s('line', { x1: padL, x2: W - padR, y1: y(t), y2: y(t), style: { stroke: t === 0 ? 'var(--axis)' : 'var(--grid)', strokeWidth: 1 } }));
+      svg.appendChild(s('text', { x: padL - 8, y: y(t) + 4, 'text-anchor': 'end' }, compact(t, cur)));
+    }
+    svg.appendChild(s('text', { x: padL, y: H - 7, 'text-anchor': 'start' }, 'Day 1'));
+    svg.appendChild(s('text', { x: W - padR, y: H - 7, 'text-anchor': 'end' }, 'Day ' + len));
+    const path = arr => arr.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(v).toFixed(1)).join('');
+    if (before.length) svg.appendChild(s('path', { d: path(before), style: { fill: 'none', stroke: 'var(--muted)', strokeWidth: 2, strokeDasharray: '5 4', strokeLinejoin: 'round' } }));
+    if (now.length) {
+      svg.appendChild(s('path', { d: path(now) + `L${x(now.length - 1).toFixed(1)},${y(0)}L${x(0)},${y(0)}Z`, style: { fill: 'var(--accent)', opacity: 0.12 } }));
+      svg.appendChild(s('path', { d: path(now), style: { fill: 'none', stroke: 'var(--accent)', strokeWidth: 2.5, strokeLinejoin: 'round', strokeLinecap: 'round' } }));
+      svg.appendChild(s('circle', { cx: x(now.length - 1), cy: y(now[now.length - 1]), r: 5, style: { fill: 'var(--accent)', stroke: 'var(--surface)', strokeWidth: 2 } }));
+    }
+    const cross = s('line', { y1: padT, y2: padT + ih, style: { stroke: 'var(--ink-2)', strokeWidth: 1, opacity: 0, pointerEvents: 'none' } });
+    svg.appendChild(cross);
+    const hit = s('rect', { x: padL - 10, y: padT, width: iw + 20, height: ih, class: 'hit' });
+    const at = cx => Math.max(0, Math.min(len - 1, Math.round((cx - padL) / (iw || 1) * (len - 1))));
+    const show = i => {
+      cross.setAttribute('x1', x(i)); cross.setAttribute('x2', x(i)); cross.style.opacity = 1;
+      const rr = svg.getBoundingClientRect();
+      const rowsT = [];
+      if (i < now.length) rowsT.push({ value: money(now[i], cur), label: nowName + ', by ' + shortDate(shiftDays(from, i)) });
+      if (i < before.length) rowsT.push({ value: money(before[i], cur), label: beforeName + ', by ' + shortDate(shiftDays(prevFrom, i)) });
+      showTip(rr.left + x(i), rr.top + y(Math.max(now[Math.min(i, now.length - 1)] || 0, before[Math.min(i, before.length - 1)] || 0)), { title: 'Day ' + (i + 1), rows: rowsT });
+      tipOwner = { hit, mark: null, chart: null };
+    };
+    const move = e => { const rr = svg.getBoundingClientRect(); show(at(e.clientX - rr.left)); };
+    hit.addEventListener('pointermove', move);
+    hit.addEventListener('pointerdown', e => { e.stopPropagation(); move(e); });
+    hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { cross.style.opacity = 0; hideTip(); } });
+    svg.appendChild(hit);
+    return svg;
+  }, height, 'Running total against the period before');
+}
+
+/* clicks on chart parts: a click with a mouse, two taps on a touch screen (the first shows the numbers) */
+function pickable(el, fn) {
+  if (!fn) return;
+  let armed = false, kind = null, timer = null;
+  el.classList.add('pickable');
+  el.addEventListener('pointerdown', e => {
+    kind = e.pointerType;
+    if (kind === 'mouse') return;
+    if (armed) { armed = false; clearTimeout(timer); fn(); }
+    else { armed = true; clearTimeout(timer); timer = setTimeout(() => { armed = false; }, 2500); }
+  });
+  el.addEventListener('click', () => { if (kind === 'mouse' || kind === null) fn(); kind = null; });
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fn(); } });
+}
+
 function buckets(from, to, byDate) {
   const n = daysBetween(from, to) + 1;
   const items = [];
   if (n <= 0) return { items, unit: 'day', unitTitle: 'by day' };
   if (n <= 62) {
-    for (let d = from; d <= to; d = shiftDays(d, 1)) items.push({ label: String(Number(d.slice(8))), title: fmtDay(d), value: byDate.get(d) || 0 });
+    for (let d = from; d <= to; d = shiftDays(d, 1)) items.push({ label: String(Number(d.slice(8))), title: fmtDay(d), value: byDate.get(d) || 0, date: d, highlight: d === anDay });
     return { items, unit: 'day', unitTitle: 'by day' };
   }
   if (n <= 400) {
     for (let w = startOfWeek(from); w <= to; w = shiftDays(w, 7)) {
       let v = 0; for (let i = 0; i < 7; i++) { const d = shiftDays(w, i); if (d >= from && d <= to) v += byDate.get(d) || 0; }
-      items.push({ label: dateOf(w).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), title: 'Week of ' + fmtDate(w), value: v });
+      items.push({ label: dateOf(w).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), title: 'Week of ' + fmtDate(w), value: v, date: w });
     }
     return { items, unit: 'week', unitTitle: 'by week' };
   }
   for (let ym = from.slice(0, 7); ym <= to.slice(0, 7); ym = addMonths(ym, 1)) {
     const mb = monthBounds(ym); let v = 0;
     byDate.forEach((val, d) => { if (d >= mb.first && d <= mb.last) v += val; });
-    items.push({ label: monthShort(ym), title: monthLabel(ym), value: v });
+    items.push({ label: monthShort(ym), title: monthLabel(ym), value: v, date: ym + '-15' });
   }
   return { items, unit: 'month', unitTitle: 'by month' };
 }
+
 function separateSection(rows) {
   const curs = ENTRY_CURS.filter(c => rows.some(e => (e.currency || 'GBP') === c));
   return section('Each currency on its own', 'Exactly as you entered it, with no conversion.',
@@ -4288,7 +4645,7 @@ function openEntrySheet(preset = {}) {
       pick = h('div', null, h('div', { class: 'hint' }, t ? 'Counts for ' + (t.emoji || '🧳') + ' ' + t.name + ', by its date.' : cache.trips.length ? 'No trip around this date, so it is kept as trip spending without a trip.' : 'Add a trip to see its total.'),
         h('div', { class: 'pill-grid', style: { marginTop: '8px' } }, newTrip));
     }
-    tripWrap.append(
+    append(tripWrap, [
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Which trip?'), pick),
       h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'What for?'),
         h('div', { class: 'pill-grid' }, TRIP_SUBS.map(sb => {
@@ -4298,7 +4655,7 @@ function openEntrySheet(preset = {}) {
         }))),
       tripGroup(st.sub) === 'Transport' && st.sub ? h('div', { class: 'field' }, h('span', { class: 'field-label' }, 'Which transport?'),
         h('div', { class: 'pill-grid' }, TRIP_TRANSPORT.map(sb => h('button', { type: 'button', class: 'pill' + (st.sub === sb ? ' on' : ''), onclick: () => { st.sub = st.sub === sb ? 'Transport' : sb; paintTrip(); } },
-          h('span', { class: 'emo', 'aria-hidden': 'true' }, SUB_EMOJI[sb] || ''), sb)))) : null);
+          h('span', { class: 'emo', 'aria-hidden': 'true' }, SUB_EMOJI[sb] || ''), sb)))) : null]);
   };
   const typeSeg = seg([['expense', 'Expense', 'out'], ['income', 'Income', 'in']], st.type, v => {
     st.type = v; st.cat = null; st.sub = null; paintCats(); paintSubs(); paintTrip(); paintCur();
